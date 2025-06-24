@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "525658721900",
+    "project_id": "outi-log",
+    "storage_bucket": "outi-log.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:525658721900:android:a53debd347c0a7adcbd249",
+        "android_client_info": {
+          "package_name": "com.prod.outilog"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiL9t2B0mRNYElFljaSEBuStCHJRyJ7KU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
