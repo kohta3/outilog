@@ -8,10 +8,9 @@ import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/transaction_provider.dart';
 import 'package:outi_log/view/component/app_drawer.dart';
-import 'package:outi_log/view/component/schedule/dialog_component.dart';
 import 'package:outi_log/view/household_budget.dart';
 import 'package:outi_log/view/schedule_screen.dart';
-import 'package:outi_log/view/shopping_list_screen.dart';
+import 'package:outi_log/view/shopping_list.dart';
 import 'package:outi_log/view/space_add_screen.dart';
 import 'package:provider/provider.dart' as provider_package;
 

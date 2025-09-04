@@ -88,24 +88,24 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated();
     }
     
-    // 買い物リストコレクション
-    match /shopping_lists/{listId} {
-      // 認証済みユーザーは全ての買い物リストを読み取り可能
+    // 買い物リストグループコレクション
+    match /shopping_list_groups/{groupId} {
+      // 認証済みユーザーは全ての買い物リストグループを読み取り可能
       allow read: if isAuthenticated();
       
-      // 買い物リスト作成は認証済みユーザーのみ
+      // 買い物リストグループ作成は認証済みユーザーのみ
       allow create: if isAuthenticated();
       
-      // 買い物リスト更新・削除は作成者または同じスペースの参加者
+      // 買い物リストグループ更新・削除は作成者または同じスペースの参加者
       allow update, delete: if isAuthenticated();
     }
     
-    // 買い物アイテムコレクション
-    match /shopping_items/{itemId} {
-      // 認証済みユーザーは全ての買い物アイテムを読み取り可能
+    // 買い物リストアイテムコレクション
+    match /shopping_list_items/{itemId} {
+      // 認証済みユーザーは全ての買い物リストアイテムを読み取り可能
       allow read: if isAuthenticated();
       
-      // 買い物アイテム作成・更新・削除は認証済みユーザーのみ
+      // 買い物リストアイテム作成・更新・削除は認証済みユーザーのみ
       allow create, update, delete: if isAuthenticated();
     }
 
