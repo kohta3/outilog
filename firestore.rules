@@ -1,0 +1,165 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ユーザー認証が必要な基本ルール
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // ユーザーが自分自身かどうかチェック
+    function isUser(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // スペースのオーナーかどうかチェック
+    function isSpaceOwner(spaceId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/spaces/$(spaceId)) &&
+             get(/databases/$(database)/documents/spaces/$(spaceId)).data.owner_id == request.auth.uid;
+    }
+    
+    // スペースの参加者かどうかチェック
+    function isSpaceParticipant(spaceId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/space_participants/$(request.auth.uid + '_' + spaceId));
+    }
+
+    // スペースコレクション
+    match /spaces/{spaceId} {
+      // 認証済みユーザーは全てのスペースを読み取り可能（参加者チェックは後で実装）
+      allow read: if isAuthenticated();
+      
+      // スペース作成は認証済みユーザーのみ
+      allow create: if isAuthenticated() && 
+                       request.auth.uid == resource.data.owner_id;
+      
+      // スペース更新・削除はオーナーのみ
+      allow update, delete: if isAuthenticated() && 
+                               request.auth.uid == resource.data.owner_id;
+    }
+
+    // スペース参加者コレクション
+    match /space_participants/{participantId} {
+      // 認証済みユーザーは全ての参加者情報を読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 参加者追加は認証済みユーザーのみ（招待コード経由など）
+      allow create: if isAuthenticated();
+      
+      // 自分の参加者情報は更新・削除可能
+      allow update, delete: if isAuthenticated() && 
+                               request.auth.uid == resource.data.user_id;
+    }
+
+    // 招待コードコレクション
+    match /space_invites/{inviteId} {
+      // 認証済みユーザーは招待コードを読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 招待コード作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // 招待コード更新・削除は作成者のみ
+      allow update, delete: if isAuthenticated() && 
+                               request.auth.uid == resource.data.created_by;
+    }
+
+    // スケジュールコレクション
+    match /schedules/{scheduleId} {
+      // 認証済みユーザーは全てのスケジュールを読み取り可能
+      allow read: if isAuthenticated();
+      
+      // スケジュール作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // スケジュール更新・削除は作成者または同じスペースの参加者
+      allow update, delete: if isAuthenticated();
+    }
+    
+    // 家計簿（取引）コレクション
+    match /transactions/{transactionId} {
+      // 認証済みユーザーは全ての取引を読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 取引作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // 取引更新・削除は作成者または同じスペースの参加者
+      allow update, delete: if isAuthenticated();
+    }
+    
+    // 買い物リストコレクション
+    match /shopping_lists/{listId} {
+      // 認証済みユーザーは全ての買い物リストを読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 買い物リスト作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // 買い物リスト更新・削除は作成者または同じスペースの参加者
+      allow update, delete: if isAuthenticated();
+    }
+    
+    // 買い物アイテムコレクション
+    match /shopping_items/{itemId} {
+      // 認証済みユーザーは全ての買い物アイテムを読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 買い物アイテム作成・更新・削除は認証済みユーザーのみ
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    // カテゴリーコレクション
+    match /categories/{categoryId} {
+      // 認証済みユーザーは全てのカテゴリーを読み取り可能
+      allow read: if isAuthenticated();
+      
+      // カテゴリー作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // カテゴリー更新・削除は作成者または同じスペースの参加者
+      allow update, delete: if isAuthenticated();
+    }
+
+    // 支払い方法コレクション
+    match /payment_methods/{paymentMethodId} {
+      // 認証済みユーザーは全ての支払い方法を読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 支払い方法作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // 支払い方法更新・削除は作成者または同じスペースの参加者
+      allow update, delete: if isAuthenticated();
+    }
+
+    // 支出コレクション
+    match /expenses/{expenseId} {
+      // 認証済みユーザーは全ての支出を読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 支出作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // 支出更新・削除は作成者または同じスペースの参加者
+      allow update, delete: if isAuthenticated();
+    }
+
+    // 収入コレクション
+    match /incomes/{incomeId} {
+      // 認証済みユーザーは全ての収入を読み取り可能
+      allow read: if isAuthenticated();
+      
+      // 収入作成は認証済みユーザーのみ
+      allow create: if isAuthenticated();
+      
+      // 収入更新・削除は作成者または同じスペースの参加者
+      allow update, delete: if isAuthenticated();
+    }
+
+    // デフォルトで全てのアクセスを拒否
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

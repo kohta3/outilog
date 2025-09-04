@@ -1,29 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/controllers/scheduler_controller.dart';
 import 'package:outi_log/infrastructure/schedule_infrastructure.dart';
 import 'package:outi_log/models/schedule_model.dart';
+import 'package:outi_log/provider/schedule_firestore_provider.dart';
+import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/utils/format.dart';
 import 'package:outi_log/utils/schedule_util.dart' as schedule_util;
 import 'package:outi_log/view/component/common.dart';
-import 'package:outi_log/provider/event_provider.dart';
 
-class DialogComponent extends StatefulWidget {
+class DialogComponent extends ConsumerStatefulWidget {
   final DateTime? selectedDate;
+  final ScheduleModel? initialSchedule;
 
-  const DialogComponent({super.key, this.selectedDate});
+  const DialogComponent({
+    super.key,
+    this.selectedDate,
+    this.initialSchedule,
+  });
 
   @override
-  State<DialogComponent> createState() => _DialogComponentState();
+  ConsumerState<DialogComponent> createState() => _DialogComponentState();
 }
 
-class _DialogComponentState extends State<DialogComponent> {
+class _DialogComponentState extends ConsumerState<DialogComponent> {
   String? title;
   bool isAllDay = true;
   DateTime startDateTime = DateTime.now();
   DateTime endDateTime = DateTime.now();
   String? memo;
-  // Color? color;
+  Color selectedColor = defaultScheduleColor; // 選択された色を追加
   bool fiveMinutesBefore = false;
   bool tenMinutesBefore = false;
   bool thirtyMinutesBefore = false;
@@ -42,7 +49,52 @@ class _DialogComponentState extends State<DialogComponent> {
   @override
   void initState() {
     super.initState();
-    selectedDateTime = widget.selectedDate;
+
+    // 既存のスケジュールデータがある場合は初期値として設定
+    if (widget.initialSchedule != null) {
+      final schedule = widget.initialSchedule!;
+      titleController.text = schedule.title;
+      memoController.text = schedule.memo ?? '';
+      startDateTime = schedule.startDateTime;
+      endDateTime = schedule.endDateTime;
+      isAllDay = schedule.isAllDay;
+      fiveMinutesBefore = schedule.fiveMinutesBefore;
+      tenMinutesBefore = schedule.tenMinutesBefore;
+      thirtyMinutesBefore = schedule.thirtyMinutesBefore;
+      oneHourBefore = schedule.oneHourBefore;
+      threeHoursBefore = schedule.threeHoursBefore;
+      sixHoursBefore = schedule.sixHoursBefore;
+      twelveHoursBefore = schedule.twelveHoursBefore;
+      oneDayBefore = schedule.oneDayBefore;
+      participationList = Map.from(schedule.participationList);
+      // 色設定は一時的に無効化
+    } else {
+      // 新規作成の場合、選択された日付を設定
+      if (widget.selectedDate != null) {
+        // 選択された日付の00:00から23:59までを設定
+        final selectedDate = widget.selectedDate!;
+        startDateTime =
+            DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+        endDateTime = DateTime(
+            selectedDate.year, selectedDate.month, selectedDate.day, 23, 59);
+        // 新規作成時は終日で初期化
+        isAllDay = true;
+
+        // デバッグ用：選択された日付をログ出力
+        print('DEBUG: Selected date for new schedule: $selectedDate');
+        print('DEBUG: Start date set to: $startDateTime');
+        print('DEBUG: End date set to: $endDateTime');
+      } else {
+        // 日付が選択されていない場合は今日の日付を設定
+        final today = DateTime.now();
+        startDateTime = DateTime(today.year, today.month, today.day);
+        endDateTime = DateTime(today.year, today.month, today.day, 23, 59);
+        isAllDay = true;
+
+        // デバッグ用：今日の日付をログ出力
+        print('DEBUG: No date selected, using today: $today');
+      }
+    }
   }
 
   void _showDateTimePicker() {
@@ -60,13 +112,99 @@ class _DialogComponentState extends State<DialogComponent> {
   void _showDatePicker() {
     schedule_util.showDatePicker(context, startDateTime, (date) {
       setState(() {
-        startDateTime = date;
+        // 開始日時を選択した日付の00:00に設定
+        startDateTime = DateTime(date.year, date.month, date.day);
+        // 終了日時も同じ日付の23:59に設定
+        endDateTime = DateTime(date.year, date.month, date.day, 23, 59);
       });
     }, (date) {
       setState(() {
-        startDateTime = date;
+        // 開始日時を選択した日付の00:00に設定
+        startDateTime = DateTime(date.year, date.month, date.day);
+        // 終了日時も同じ日付の23:59に設定
+        endDateTime = DateTime(date.year, date.month, date.day, 23, 59);
       });
     });
+  }
+
+  // 色選択ダイアログを表示
+  void _showColorPicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('ラベルの色を選択'),
+          content: Container(
+            width: 300,
+            height: 200,
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: scheduleColors.length,
+              itemBuilder: (context, index) {
+                final color = scheduleColors[index];
+                final isSelected = selectedColor == color;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedColor = color;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? Colors.white : Colors.transparent,
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: isSelected
+                        ? Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 24,
+                          )
+                        : null,
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('キャンセル'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Colorを16進数文字列に変換
+  String _colorToHex(Color color) {
+    return '#${color.value.toRadixString(16).substring(2)}';
+  }
+
+  // 16進数文字列をColorに変換
+  Color _hexToColor(String hex) {
+    hex = hex.replaceAll('#', '');
+    if (hex.length == 6) {
+      hex = 'FF$hex'; // アルファ値を追加
+    }
+    return Color(int.parse(hex, radix: 16));
   }
 
   @override
@@ -92,7 +230,9 @@ class _DialogComponentState extends State<DialogComponent> {
                 child: Row(
                   children: [
                     sizedIconBox(Icons.title),
-                    expandedTextField('タイトル', titleController)
+                    expandedTextField(
+                        widget.initialSchedule != null ? 'タイトル（編集中）' : 'タイトル',
+                        titleController)
                   ],
                 ),
               ),
@@ -105,6 +245,22 @@ class _DialogComponentState extends State<DialogComponent> {
                     onChanged: (value) {
                       setState(() {
                         isAllDay = value;
+                        if (value) {
+                          // 終日がオンになった場合、選択された日付の00:00-23:59に設定
+                          if (widget.selectedDate != null) {
+                            final selectedDate = widget.selectedDate!;
+                            startDateTime = DateTime(selectedDate.year,
+                                selectedDate.month, selectedDate.day);
+                            endDateTime = DateTime(selectedDate.year,
+                                selectedDate.month, selectedDate.day, 23, 59);
+                          }
+                        } else {
+                          // 終日がオフになった場合、現在の日付の現在時刻から1時間後に設定
+                          final now = DateTime.now();
+                          startDateTime = DateTime(now.year, now.month, now.day,
+                              now.hour, now.minute);
+                          endDateTime = startDateTime.add(Duration(hours: 1));
+                        }
                       });
                     },
                   ),
@@ -226,6 +382,43 @@ class _DialogComponentState extends State<DialogComponent> {
                 ],
               ),
               SizedBox(height: 12),
+              // 色選択
+              Row(
+                children: [
+                  sizedIconBox(Icons.palette),
+                  SizedBox(width: 8),
+                  Text('ラベルの色'),
+                  SizedBox(width: 16),
+                  GestureDetector(
+                    onTap: _showColorPicker,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: selectedColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.grey[300]!,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: selectedColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
               SizedBox(
                 height: 100,
                 child: Row(
@@ -261,14 +454,101 @@ class _DialogComponentState extends State<DialogComponent> {
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton(
-                onPressed: () {
+                onPressed: () async {
+                  if (titleController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('タイトルを入力してください'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final currentSpace =
+                      ref.read(firestoreSpacesProvider)?.currentSpace;
+                  if (currentSpace == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('スペースが選択されていません'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  try {
+                    bool success = false;
+
+                    if (widget.initialSchedule != null) {
+                      // 編集モード - 予定を更新
+                      success = await ref
+                          .read(scheduleFirestoreProvider.notifier)
+                          .updateSchedule(
+                            scheduleId: widget.initialSchedule!.id!,
+                            title: titleController.text.trim(),
+                            description: memoController.text.trim(),
+                            startTime: startDateTime,
+                            endTime: endDateTime,
+                            color: _colorToHex(selectedColor),
+                            isAllDay: isAllDay,
+                          );
+                    } else {
+                      // 新規作成モード - 予定を追加
+                      success = await ref
+                          .read(scheduleFirestoreProvider.notifier)
+                          .addSchedule(
+                            title: titleController.text.trim(),
+                            description: memoController.text.trim(),
+                            startTime: startDateTime,
+                            endTime: endDateTime,
+                            color: _colorToHex(selectedColor),
+                            isAllDay: isAllDay,
+                          );
+                    }
+
+                    if (success) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(widget.initialSchedule != null
+                              ? '予定を更新しました'
+                              : '予定を追加しました'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      // カレンダー表示を強制更新
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(widget.initialSchedule != null
+                              ? '予定の更新に失敗しました'
+                              : '予定の追加に失敗しました'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    print(
+                        'DEBUG: Error ${widget.initialSchedule != null ? 'updating' : 'adding'} schedule: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('エラーが発生しました: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+
+                  // 従来のローカル保存も並行して実行（移行期間用）
                   SchedulerController(ScheduleInfrastructure())
                       .addSchedule(ScheduleModel(
                     title: titleController.text,
                     startDateTime: startDateTime,
                     endDateTime: endDateTime,
                     memo: memoController.text,
-                    // color: color,
                     isAllDay: isAllDay,
                     fiveMinutesBefore: fiveMinutesBefore,
                     tenMinutesBefore: tenMinutesBefore,
@@ -279,17 +559,14 @@ class _DialogComponentState extends State<DialogComponent> {
                     twelveHoursBefore: twelveHoursBefore,
                     oneDayBefore: oneDayBefore,
                     participationList: participationList,
+                    color: _colorToHex(selectedColor),
                   ));
-                  if (titleController.text.isNotEmpty &&
-                      selectedDateTime != null) {
-                    Navigator.pop(context);
-                  }
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: themeColor,
                   side: const BorderSide(color: themeColor),
                 ),
-                child: const Text('追加'),
+                child: Text(widget.initialSchedule != null ? '更新' : '追加'),
               ),
             ),
           ],

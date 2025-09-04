@@ -63,7 +63,24 @@ class SpacesNotifier extends StateNotifier<SpacesModel?> {
     }
   }
 
-  /// スペースを削除
+  /// 個別のスペースを削除
+  Future<bool> deleteSpace(String spaceId, String userId) async {
+    if (state == null) return false;
+
+    final success = await _repo.deleteSpace(spaceId, userId);
+    if (success) {
+      final updatedSpaces = await _repo.getSpaces();
+      if (updatedSpaces != null) {
+        state = updatedSpaces;
+      } else {
+        // 全てのスペースが削除された場合
+        state = null;
+      }
+    }
+    return success;
+  }
+
+  /// スペースを削除（全て削除）
   Future<void> deleteSpaces() async {
     await _repo.deleteSpaces();
     state = null;

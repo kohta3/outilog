@@ -5,6 +5,7 @@ import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/models/space_model.dart';
 import 'package:outi_log/provider/auth_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
+import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -137,7 +138,11 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
 
   /// スペース作成制限のチェック
   bool _checkSpaceLimit() {
-    final canCreate = ref.read(spacesProvider.notifier).canCreateSpace;
+    // Firestoreプロバイダーを優先的にチェック
+    final firestoreSpaces = ref.read(firestoreSpacesProvider);
+    final canCreate = firestoreSpaces?.canCreateSpace ??
+        ref.read(spacesProvider.notifier).canCreateSpace;
+
     if (!canCreate) {
       Toast.show(context, 'スペース作成上限に達しています（無料版は2つまで）');
       return false;
@@ -153,41 +158,15 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
       return false;
     }
 
-    final newSpace = _buildSpaceModel(currentUser.uid);
-    return await ref
-        .read(spacesProvider.notifier)
-        .addSpace(newSpace, currentUser.uid);
+    // Firestoreプロバイダーを使用してスペースを作成
+    return await ref.read(firestoreSpacesProvider.notifier).addSpace(
+          spaceName: _spaceNameController.text.trim(),
+          userName: currentUser.displayName ?? '名無し',
+          userEmail: currentUser.email ?? '',
+        );
   }
 
-  /// SpaceModelを構築
-  SpaceModel _buildSpaceModel(String userId) {
-    final allMembers = _buildMembersList(userId);
-
-    return SpaceModel(
-      id: 'space_${DateTime.now().millisecondsSinceEpoch}',
-      spaceName: _spaceNameController.text.trim(),
-      sharedUsers: allMembers,
-      ownerId: userId,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-  }
-
-  /// メンバーリストを構築（作成者を含む）
-  List<SharedUser> _buildMembersList(String userId) {
-    final allMembers = List<SharedUser>.from(_members);
-
-    // 作成者が既に含まれているかチェック
-    final creatorExists = allMembers.any((member) => member.address == userId);
-    if (!creatorExists) {
-      allMembers.add(SharedUser(
-        name: 'あなた',
-        address: userId,
-      ));
-    }
-
-    return allMembers;
-  }
+  // 古いSpaceModel関連のメソッドは削除（Firestoreに移行済み）
 
   /// スペース作成成功時の処理
   void _handleSpaceCreationSuccess() {
@@ -212,76 +191,6 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
     }
   }
 
-  // MARK: - メンバー管理
-
-  /// メンバーを追加
-  void _addMember() {
-    final nameController = TextEditingController();
-    final addressController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) =>
-          _buildAddMemberDialog(nameController, addressController),
-    );
-  }
-
-  /// メンバー追加ダイアログを構築
-  Widget _buildAddMemberDialog(
-    TextEditingController nameController,
-    TextEditingController addressController,
-  ) {
-    return AlertDialog(
-      title: const Text('メンバーを追加'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: '名前',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: addressController,
-            decoration: const InputDecoration(
-              labelText: 'メールアドレス',
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('キャンセル'),
-        ),
-        ElevatedButton(
-          onPressed: () => _confirmAddMember(nameController, addressController),
-          child: const Text('追加'),
-        ),
-      ],
-    );
-  }
-
-  /// メンバー追加の確認処理
-  void _confirmAddMember(
-    TextEditingController nameController,
-    TextEditingController addressController,
-  ) {
-    if (nameController.text.isNotEmpty && addressController.text.isNotEmpty) {
-      setState(() {
-        _members.add(SharedUser(
-          name: nameController.text.trim(),
-          address: addressController.text.trim(),
-        ));
-      });
-      Navigator.pop(context);
-    }
-  }
-
   /// メンバーを削除
   void _removeMember(SharedUser member) {
     setState(() {
@@ -290,10 +199,12 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
   }
 
   // MARK: - UI Views
-
   @override
   Widget build(BuildContext context) {
-    final canCreateSpace = ref.watch(spacesProvider.notifier).canCreateSpace;
+    // Firestoreプロバイダーを優先的に使用
+    final firestoreSpaces = ref.watch(firestoreSpacesProvider);
+    final canCreateSpace = firestoreSpaces?.canCreateSpace ??
+        ref.watch(spacesProvider.notifier).canCreateSpace;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -385,7 +296,10 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
 
   /// スペース作成フォームビュー
   Widget _buildCreateSpaceView() {
-    final remainingSpaces = ref.watch(spacesProvider.notifier).remainingSpaces;
+    // Firestoreプロバイダーを優先的に使用
+    final firestoreSpaces = ref.watch(firestoreSpacesProvider);
+    final remainingSpaces = firestoreSpaces?.remainingSpaces ??
+        ref.watch(spacesProvider.notifier).remainingSpaces;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -528,8 +442,6 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
         ),
         const SizedBox(height: 8),
         ..._members.map((member) => _buildMemberCard(member)).toList(),
-        const SizedBox(height: 16),
-        _buildAddMemberButton(),
       ],
     );
   }
@@ -579,19 +491,6 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
             icon: const Icon(Icons.remove_circle, color: Colors.red),
           ),
         ],
-      ),
-    );
-  }
-
-  /// メンバー追加ボタン
-  Widget _buildAddMemberButton() {
-    return ElevatedButton.icon(
-      onPressed: _addMember,
-      icon: const Icon(Icons.add),
-      label: const Text('メンバーを追加'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: themeColor,
-        foregroundColor: Colors.white,
       ),
     );
   }

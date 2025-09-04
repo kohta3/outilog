@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:outi_log/constant/color.dart';
-import 'package:outi_log/models/space_model.dart';
+
 import 'package:outi_log/provider/auth_provider.dart';
 import 'package:outi_log/provider/event_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
+import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/transaction_provider.dart';
 import 'package:outi_log/view/component/app_drawer.dart';
 import 'package:outi_log/view/component/schedule/dialog_component.dart';
@@ -40,6 +41,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _initializeSpace() async {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser != null) {
+      // Firestoreスペースプロバイダーを初期化
+      await ref.read(firestoreSpacesProvider.notifier).initializeSpaces();
+
+      // 従来のローカルスペースも並行して初期化（移行中のため）
       await ref.read(spacesProvider.notifier).initializeSpaces(currentUser.uid);
     }
   }
@@ -47,7 +52,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _getAppBarTitle(int index) {
     switch (index) {
       case 0:
-        return '予定';
+        return 'スケジュール';
       case 1:
         return '家計簿';
       case 2:
@@ -60,7 +65,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(homeScreenIndexProvider);
-    final spaces = ref.watch(spacesProvider);
+
+    // Firestoreスペースを優先的に使用
+    final firestoreSpaces = ref.watch(firestoreSpacesProvider);
+    final localSpaces = ref.watch(spacesProvider);
+
+    // Firestoreにスペースがある場合はそちらを使用、なければローカルを使用
+    final spaces = firestoreSpaces ?? localSpaces;
     final currentSpace = spaces?.currentSpace;
 
     return provider_package.MultiProvider(
@@ -83,19 +94,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           backgroundColor: themeColor,
-          actions: currentSpace != null && selectedIndex == 0
-              ? [
-                  IconButton(
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => const DialogComponent(),
-                      );
-                    },
-                  ),
-                ]
-              : null,
+          // actions: currentSpace != null && selectedIndex == 0
+          //     ? [
+          //         IconButton(
+          //           icon: const Icon(Icons.add, color: Colors.white),
+          //           onPressed: () {
+          //             showDialog(
+          //               context: context,
+          //               builder: (context) => const DialogComponent(),
+          //             );
+          //           },
+          //         ),
+          //       ]
+          //     : null,
         ),
         drawer: const AppDrawer(),
         body: currentSpace != null
@@ -112,7 +123,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 items: const [
                   BottomNavigationBarItem(
                     icon: Icon(Icons.calendar_today),
-                    label: '予定',
+                    label: 'スケジュール',
                   ),
                   BottomNavigationBarItem(
                     icon: Icon(Icons.account_balance_wallet),

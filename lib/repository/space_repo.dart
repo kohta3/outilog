@@ -127,4 +127,46 @@ class SpaceRepo {
       await setSpaces(newSpacesModel);
     }
   }
+
+  // 個別のスペースを削除
+  Future<bool> deleteSpace(String spaceId, String userId) async {
+    final currentSpaces = await getSpaces();
+    if (currentSpaces == null) return false;
+
+    // 削除対象のスペースが存在するかチェック
+    if (!currentSpaces.spaces.containsKey(spaceId)) {
+      return false;
+    }
+
+    final spaceToDelete = currentSpaces.spaces[spaceId]!;
+
+    // オーナーのみがスペースを削除できる
+    if (spaceToDelete.ownerId != userId) {
+      return false;
+    }
+
+    // スペースが1つしかない場合は削除を防ぐ
+    if (currentSpaces.spaces.length <= 1) {
+      return false;
+    }
+
+    // スペースを削除
+    final updatedSpaces = Map<String, SpaceModel>.from(currentSpaces.spaces);
+    updatedSpaces.remove(spaceId);
+
+    // 削除したスペースが現在のスペースだった場合、別のスペースを選択
+    String newCurrentSpaceId = currentSpaces.currentSpaceId;
+    if (currentSpaces.currentSpaceId == spaceId) {
+      newCurrentSpaceId = updatedSpaces.keys.first;
+    }
+
+    final newSpacesModel = SpacesModel(
+      spaces: updatedSpaces,
+      currentSpaceId: newCurrentSpaceId,
+      maxSpaces: currentSpaces.maxSpaces,
+    );
+
+    await setSpaces(newSpacesModel);
+    return true;
+  }
 }

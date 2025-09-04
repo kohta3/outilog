@@ -1,10 +1,11 @@
 class ScheduleModel {
+  final String? id; // Firestore用のIDフィールドを追加
   final String title;
   final bool isAllDay;
   final DateTime startDateTime;
   final DateTime endDateTime;
   final String? memo;
-  // final int? color;
+  final String? color;
   final bool fiveMinutesBefore;
   final bool tenMinutesBefore;
   final bool thirtyMinutesBefore;
@@ -17,12 +18,13 @@ class ScheduleModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   ScheduleModel({
+    this.id, // IDフィールドを追加
     required this.title,
     required this.isAllDay,
     required this.startDateTime,
     required this.endDateTime,
     this.memo,
-    // this.color,
+    this.color,
     required this.fiveMinutesBefore,
     required this.tenMinutesBefore,
     required this.thirtyMinutesBefore,
@@ -43,7 +45,7 @@ class ScheduleModel {
       startDateTime: json['startDateTime'].toDate(),
       endDateTime: json['endDateTime'].toDate(),
       memo: json['memo'],
-      // color: json['color'],
+      color: json['color'],
       fiveMinutesBefore: json['fiveMinutesBefore'],
       tenMinutesBefore: json['tenMinutesBefore'],
       thirtyMinutesBefore: json['thirtyMinutesBefore'],
@@ -58,6 +60,29 @@ class ScheduleModel {
     );
   }
 
+  // Firestore形式からScheduleModelを作成
+  factory ScheduleModel.fromFirestore(Map<String, dynamic> data) {
+    return ScheduleModel(
+      id: data['id'],
+      title: data['title'] ?? '',
+      isAllDay: data['is_all_day'] ?? false,
+      startDateTime: (data['start_time'] as dynamic).toDate(),
+      endDateTime: (data['end_time'] as dynamic).toDate(),
+      memo: data['description'] ?? '',
+      fiveMinutesBefore: false,
+      tenMinutesBefore: false,
+      thirtyMinutesBefore: false,
+      oneHourBefore: false,
+      threeHoursBefore: false,
+      sixHoursBefore: false,
+      twelveHoursBefore: false,
+      oneDayBefore: false,
+      participationList: {},
+      createdAt: (data['created_at'] as dynamic)?.toDate(),
+      updatedAt: (data['updated_at'] as dynamic)?.toDate(),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'title': title,
@@ -65,7 +90,7 @@ class ScheduleModel {
       'startDateTime': startDateTime,
       'endDateTime': endDateTime,
       'memo': memo,
-      // 'color': color,
+      'color': color,
       'fiveMinutesBefore': fiveMinutesBefore,
       'tenMinutesBefore': tenMinutesBefore,
       'thirtyMinutesBefore': thirtyMinutesBefore,
