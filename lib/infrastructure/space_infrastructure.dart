@@ -28,6 +28,7 @@ class SpaceInfrastructure {
         'updated_at': FieldValue.serverTimestamp(),
         'max_participants': maxParticipants,
         'is_active': true,
+        'header_image_url': null,
       };
       batch.set(spaceRef, spaceData);
 
@@ -87,6 +88,11 @@ class SpaceInfrastructure {
         for (final spaceDoc in spacesQuery.docs) {
           final spaceData = spaceDoc.data();
 
+          // デバッグログを追加
+          print('DEBUG: Space data from getUserSpaces for ${spaceDoc.id}:');
+          print('DEBUG: header_image_url: ${spaceData['header_image_url']}');
+          print('DEBUG: space_name: ${spaceData['space_name']}');
+
           // 参加者情報を追加
           final participantInfo = participantsQuery.docs
               .firstWhere((p) => p.data()['space_id'] == spaceDoc.id);
@@ -125,6 +131,14 @@ class SpaceInfrastructure {
       // スペース基本情報を取得
       final spaceDoc =
           await _firestore.collection(_spacesCollection).doc(spaceId).get();
+
+      if (spaceDoc.exists) {
+        final spaceData = spaceDoc.data()!;
+        print('DEBUG: Raw Firestore data for space $spaceId:');
+        print('DEBUG: header_image_url: ${spaceData['header_image_url']}');
+        print('DEBUG: space_name: ${spaceData['space_name']}');
+        print('DEBUG: All fields: ${spaceData.keys.toList()}');
+      }
 
       if (!spaceDoc.exists) {
         return null;
@@ -272,7 +286,7 @@ class SpaceInfrastructure {
     }
   }
 
-  /// スペースを削除
+  /// スペースを削除（関連データも物理削除）
   Future<bool> deleteSpace({
     required String spaceId,
     required String userId,
@@ -291,33 +305,109 @@ class SpaceInfrastructure {
         throw Exception('スペースを削除する権限がありません');
       }
 
+      // 2. 関連データを物理削除
+      await _deleteSpaceRelatedData(spaceId);
+
+      // 3. スペースと参加者を物理削除
       final batch = _firestore.batch();
 
-      // 2. スペースを非アクティブに設定
+      // スペースを削除
       final spaceRef = _firestore.collection(_spacesCollection).doc(spaceId);
-      batch.update(spaceRef, {
-        'is_active': false,
-        'deleted_at': FieldValue.serverTimestamp(),
-      });
+      batch.delete(spaceRef);
 
-      // 3. 全ての参加者を非アクティブに設定
+      // 全ての参加者を削除
       final participants = await _firestore
           .collection(_participantsCollection)
           .where('space_id', isEqualTo: spaceId)
-          .where('is_active', isEqualTo: true)
           .get();
 
       for (final participant in participants.docs) {
-        batch.update(participant.reference, {
-          'is_active': false,
-          'removed_at': FieldValue.serverTimestamp(),
-        });
+        batch.delete(participant.reference);
       }
 
       await batch.commit();
       return true;
     } catch (e) {
       throw Exception('スペースの削除に失敗しました: $e');
+    }
+  }
+
+  /// スペースに関連するデータを物理削除
+  Future<void> _deleteSpaceRelatedData(String spaceId) async {
+    try {
+      // 1. スケジュールを削除
+      final schedules = await _firestore
+          .collection('schedules')
+          .where('space_id', isEqualTo: spaceId)
+          .get();
+
+      for (final schedule in schedules.docs) {
+        await schedule.reference.delete();
+      }
+
+      // 2. 家計簿取引を削除
+      final transactions = await _firestore
+          .collection('transactions')
+          .where('space_id', isEqualTo: spaceId)
+          .get();
+
+      for (final transaction in transactions.docs) {
+        await transaction.reference.delete();
+      }
+
+      // 3. 買い物リストグループを取得して削除
+      final shoppingGroups = await _firestore
+          .collection('shopping_list_groups')
+          .where('space_id', isEqualTo: spaceId)
+          .get();
+
+      for (final group in shoppingGroups.docs) {
+        // グループに紐づくアイテムを削除
+        final items = await _firestore
+            .collection('shopping_list_items')
+            .where('group_id', isEqualTo: group.id)
+            .get();
+
+        for (final item in items.docs) {
+          await item.reference.delete();
+        }
+
+        // グループを削除
+        await group.reference.delete();
+      }
+
+      // 4. カテゴリを削除
+      final categories = await _firestore
+          .collection('categories')
+          .where('space_id', isEqualTo: spaceId)
+          .get();
+
+      for (final category in categories.docs) {
+        // サブカテゴリを削除
+        final subCategories = await _firestore
+            .collection('sub_categories')
+            .where('parent_category_id', isEqualTo: category.id)
+            .get();
+
+        for (final subCategory in subCategories.docs) {
+          await subCategory.reference.delete();
+        }
+
+        // カテゴリを削除
+        await category.reference.delete();
+      }
+
+      // 5. 招待コードを削除
+      final invites = await _firestore
+          .collection('space_invites')
+          .where('space_id', isEqualTo: spaceId)
+          .get();
+
+      for (final invite in invites.docs) {
+        await invite.reference.delete();
+      }
+    } catch (e) {
+      throw Exception('関連データの削除に失敗しました: $e');
     }
   }
 
@@ -376,6 +466,20 @@ class SpaceInfrastructure {
       return true;
     } catch (e) {
       throw Exception('オーナー譲渡に失敗しました: $e');
+    }
+  }
+
+  /// スペースのヘッダー画像URLを更新
+  Future<bool> updateSpaceHeaderImage(
+      String spaceId, String? headerImageUrl) async {
+    try {
+      await _firestore.collection(_spacesCollection).doc(spaceId).update({
+        'header_image_url': headerImageUrl,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      throw Exception('ヘッダー画像の更新に失敗しました: $e');
     }
   }
 }

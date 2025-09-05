@@ -14,22 +14,14 @@ const buttomNavButton = Color(0xFF66BB6A);
 
 // スケジュール用の色パレット
 const List<Color> scheduleColors = [
-  Color(0xFF4facfe), // 青
-  Color(0xFF00f2fe), // 水色
-  Color(0xFF43e97b), // 緑
-  Color(0xFF38f9d7), // ティール
-  Color(0xFFfa709a), // ピンク
-  Color(0xFFfee140), // 黄色
-  Color(0xFFff9a9e), // サーモンピンク
-  Color(0xFFfecfef), // ライトピンク
-  Color(0xFFf093fb), // 紫
-  Color(0xFFf5576c), // 赤
-  Color(0xFF4facfe), // 青
-  Color(0xFF00f2fe), // 水色
-  Color(0xFF43e97b), // 緑
-  Color(0xFF38f9d7), // ティール
-  Color(0xFFfa709a), // ピンク
-  Color(0xFFfee140), // 黄色
+  Color(0xFF375E97), // ダークブルー
+  Color(0xFFFB6542), // オレンジレッド
+  Color(0xFF3F681C), // ダークグリーン
+  Color(0xFF6FB98F), // ミントグリーン
+  Color(0xFFF18D9E), // ピンク
+  Color(0xFF4CB5F5), // ライトブルー
+  Color(0xFFF4CC70), // イエロー
+  Color(0xFF8D230F), // ダークレッド
 ];
 
-const defaultScheduleColor = Color(0xFF4facfe);
+const defaultScheduleColor = Color(0xFF375E97);

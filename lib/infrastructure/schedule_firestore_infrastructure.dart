@@ -64,6 +64,15 @@ class ScheduleFirestoreInfrastructure {
     required String color,
     required String createdBy,
     bool isAllDay = false,
+    bool fiveMinutesBefore = false,
+    bool tenMinutesBefore = false,
+    bool thirtyMinutesBefore = false,
+    bool oneHourBefore = false,
+    bool threeHoursBefore = false,
+    bool sixHoursBefore = false,
+    bool twelveHoursBefore = false,
+    bool oneDayBefore = false,
+    Map<String, bool> participationList = const {},
   }) async {
     try {
       final scheduleRef = _firestore.collection(_schedulesCollection).doc();
@@ -81,6 +90,17 @@ class ScheduleFirestoreInfrastructure {
         'created_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
         'is_active': true,
+        // 通知設定
+        'five_minutes_before': fiveMinutesBefore,
+        'ten_minutes_before': tenMinutesBefore,
+        'thirty_minutes_before': thirtyMinutesBefore,
+        'one_hour_before': oneHourBefore,
+        'three_hours_before': threeHoursBefore,
+        'six_hours_before': sixHoursBefore,
+        'twelve_hours_before': twelveHoursBefore,
+        'one_day_before': oneDayBefore,
+        // 参加ユーザーリスト
+        'participation_list': participationList,
       });
 
       return scheduleRef.id;
@@ -100,6 +120,15 @@ class ScheduleFirestoreInfrastructure {
     DateTime? endTime,
     String? color,
     bool? isAllDay,
+    bool? fiveMinutesBefore,
+    bool? tenMinutesBefore,
+    bool? thirtyMinutesBefore,
+    bool? oneHourBefore,
+    bool? threeHoursBefore,
+    bool? sixHoursBefore,
+    bool? twelveHoursBefore,
+    bool? oneDayBefore,
+    Map<String, bool>? participationList,
   }) async {
     try {
       // スケジュールの存在確認と権限チェック
@@ -129,6 +158,24 @@ class ScheduleFirestoreInfrastructure {
       if (endTime != null) updateData['end_time'] = Timestamp.fromDate(endTime);
       if (color != null) updateData['color'] = color;
       if (isAllDay != null) updateData['is_all_day'] = isAllDay;
+      // 通知設定
+      if (fiveMinutesBefore != null)
+        updateData['five_minutes_before'] = fiveMinutesBefore;
+      if (tenMinutesBefore != null)
+        updateData['ten_minutes_before'] = tenMinutesBefore;
+      if (thirtyMinutesBefore != null)
+        updateData['thirty_minutes_before'] = thirtyMinutesBefore;
+      if (oneHourBefore != null) updateData['one_hour_before'] = oneHourBefore;
+      if (threeHoursBefore != null)
+        updateData['three_hours_before'] = threeHoursBefore;
+      if (sixHoursBefore != null)
+        updateData['six_hours_before'] = sixHoursBefore;
+      if (twelveHoursBefore != null)
+        updateData['twelve_hours_before'] = twelveHoursBefore;
+      if (oneDayBefore != null) updateData['one_day_before'] = oneDayBefore;
+      // 参加ユーザーリスト
+      if (participationList != null)
+        updateData['participation_list'] = participationList;
 
       await _firestore
           .collection(_schedulesCollection)

@@ -15,6 +15,7 @@ class ShoppingListScreen extends ConsumerStatefulWidget {
 
 class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   final Map<String, bool> _expandedGroups = {};
+  bool _isEditMode = false;
 
   @override
   void initState() {
@@ -31,13 +32,77 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
 
     return Scaffold(
       backgroundColor: background,
-      appBar: AppBar(
-        title: const Text('買い物リスト'),
-        backgroundColor: background,
-        elevation: 0,
-      ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  child: ElevatedButton(
+                    onPressed: () => _showAddGroupSheet(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shadowColor: Colors.blue.withOpacity(0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.add,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text('グループ作成'),
+                      ],
+                    ),
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _isEditMode = !_isEditMode;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isEditMode ? Colors.green : themeColor,
+                      foregroundColor: Colors.white,
+                      elevation: _isEditMode ? 4 : 2,
+                      shadowColor: (_isEditMode ? Colors.green : themeColor)
+                          .withOpacity(0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isEditMode ? Icons.check : Icons.edit,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(_isEditMode ? '完了' : '編集'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           // エラー表示
           if (shoppingListState.error != null)
             Container(
@@ -74,18 +139,6 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
             child: shoppingListState.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _buildGroupListWithItems(shoppingListState),
-          ),
-
-          // フッターボタン
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: _buildActionButton(
-              context,
-              themeColor,
-              'グループ作成',
-              Icons.add,
-              () => _showAddGroupSheet(),
-            ),
           ),
         ],
       ),
@@ -142,178 +195,91 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   Widget _buildExpandableGroupCard(ShoppingListGroupModel group) {
     final isExpanded = _expandedGroups[group.id] ?? false;
 
-    return Card(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          // グループヘッダー
-          ListTile(
-            title: Text(
-              group.groupName,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              '作成日: ${_formatDate(group.createdAt)}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  onPressed: () => _showAddItemSheet(group),
-                  icon: const Icon(Icons.add, color: themeColor),
-                  tooltip: 'アイテム追加',
-                ),
-                IconButton(
-                  onPressed: () => _showEditGroupSheet(group),
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  tooltip: '編集',
-                ),
-                IconButton(
-                  onPressed: () => _showDeleteGroupDialog(group),
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  tooltip: '削除',
-                ),
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _expandedGroups[group.id] = !isExpanded;
-                    });
-                    if (!isExpanded) {
-                      // 展開時にアイテムを読み込み
-                      ref
-                          .read(shoppingListProvider.notifier)
-                          .loadItemsForGroup(group.id);
-                    }
-                  },
-                  icon: Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: themeColor,
-                  ),
-                ),
+      child: Card(
+        elevation: isExpanded ? 8 : 3,
+        shadowColor: themeColor.withOpacity(0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                themeColor.withOpacity(0.02),
               ],
             ),
           ),
-
-          // 展開されたアイテムリスト
-          if (isExpanded) _buildGroupItems(group),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGroupItems(ShoppingListGroupModel group) {
-    return FutureBuilder<List<ShoppingListItemModel>>(
-      future:
-          ref.read(shoppingListProvider.notifier).getItemsForGroup(group.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'エラー: ${snapshot.error}',
-              style: TextStyle(color: Colors.red.shade600),
-            ),
-          );
-        }
-
-        final items = snapshot.data ?? [];
-
-        if (items.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.list_alt_outlined,
-                  size: 48,
-                  color: Colors.grey.shade400,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'アイテムがありません',
+          child: Column(
+            children: [
+              // グループヘッダー
+              ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                title: Text(
+                  group.groupName,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isExpanded ? themeColor : Colors.grey.shade800,
+                  ),
+                ),
+                subtitle: Text(
+                  '作成日: ${_formatDate(group.createdAt)}',
+                  style: TextStyle(
+                    fontSize: 12,
                     color: Colors.grey.shade600,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '上の+ボタンからアイテムを追加してください',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isEditMode) ...[
+                      _buildAnimatedIconButton(
+                        onPressed: () => _showEditGroupSheet(group),
+                        icon: Icons.edit,
+                        color: Colors.blue,
+                        tooltip: '編集',
+                      ),
+                      _buildAnimatedIconButton(
+                        onPressed: () => _showDeleteGroupDialog(group),
+                        icon: Icons.delete,
+                        color: Colors.red,
+                        tooltip: '削除',
+                      ),
+                    ],
+                    _buildAnimatedIconButton(
+                      onPressed: () {
+                        setState(() {
+                          _expandedGroups[group.id] = !isExpanded;
+                        });
+                        if (!isExpanded) {
+                          // 展開時にアイテムを読み込み
+                          ref.invalidate(groupItemsProvider(group.id));
+                        }
+                      },
+                      icon: isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: themeColor,
+                      tooltip: isExpanded ? '折りたたむ' : '展開',
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }
-
-        return Column(
-          children: items.map((item) => _buildItemCard(item)).toList(),
-        );
-      },
-    );
-  }
-
-  Widget _buildItemCard(ShoppingListItemModel item) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: ListTile(
-          title: Text(
-            item.itemName,
-            style: TextStyle(
-              decoration: item.isPurchased ? TextDecoration.lineThrough : null,
-              color: item.isPurchased ? Colors.grey.shade600 : null,
-            ),
-          ),
-          subtitle:
-              item.amount != null ? Text('${item.amount!.toInt()}円') : null,
-          leading: Checkbox(
-            value: item.isPurchased,
-            onChanged: (value) {
-              ref.read(shoppingListProvider.notifier).togglePurchaseStatus(
-                    item.id,
-                    value ?? false,
-                  );
-            },
-            activeColor: themeColor,
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () => _showEditItemSheet(item),
-                icon: const Icon(Icons.edit, size: 20),
-                tooltip: '編集',
               ),
-              IconButton(
-                onPressed: () => _showDeleteItemDialog(item),
-                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                tooltip: '削除',
+
+              // 展開されたアイテムリスト
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: isExpanded
+                    ? _buildGroupItems(group)
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
@@ -322,25 +288,276 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context,
-    Color color,
-    String label,
-    IconData icon,
-    VoidCallback onPressed,
-  ) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white),
-      label: Text(
-        label,
-        style: const TextStyle(color: Colors.white),
+  Widget _buildGroupItems(ShoppingListGroupModel group) {
+    // グループのアイテムをプロバイダーから取得
+    final itemsAsync = ref.watch(groupItemsProvider(group.id));
+
+    return itemsAsync.when(
+      data: (items) => _buildItemsList(items, group),
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
       ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      error: (error, stack) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'エラー: $error',
+          style: TextStyle(color: Colors.red.shade600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemsList(
+      List<ShoppingListItemModel> items, ShoppingListGroupModel group) {
+    if (items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(
+              Icons.list_alt_outlined,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'アイテムがありません',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // 追加ボタン
+            Container(
+              width: double.infinity,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                child: Card(
+                  elevation: 2,
+                  shadowColor: themeColor.withOpacity(0.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                        color: themeColor.withOpacity(0.3), width: 1.5),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeColor.withOpacity(0.05),
+                          themeColor.withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: themeColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.add, color: themeColor, size: 20),
+                      ),
+                      title: Text(
+                        'アイテムを追加',
+                        style: TextStyle(
+                          color: themeColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      onTap: () => _showAddItemSheet(group),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        ...items.map((item) => _buildItemCard(item)).toList(),
+        // 追加ボタン
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            child: Card(
+              elevation: 2,
+              shadowColor: themeColor.withOpacity(0.2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side:
+                    BorderSide(color: themeColor.withOpacity(0.3), width: 1.5),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      themeColor.withOpacity(0.05),
+                      themeColor.withOpacity(0.1),
+                    ],
+                  ),
+                ),
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: themeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, color: themeColor, size: 20),
+                  ),
+                  title: Text(
+                    'アイテムを追加',
+                    style: TextStyle(
+                      color: themeColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  onTap: () => _showAddItemSheet(group),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedIconButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onPressed,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemCard(ShoppingListItemModel item) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.grey.withOpacity(0.2),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.grey.shade50,
+              ],
+            ),
+          ),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            title: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                decoration:
+                    item.isPurchased ? TextDecoration.lineThrough : null,
+                color: item.isPurchased
+                    ? Colors.grey.shade600
+                    : Colors.grey.shade800,
+              ),
+              child: Text(item.itemName),
+            ),
+            subtitle: item.amount != null
+                ? Text(
+                    '${item.amount!.toInt()}円',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  )
+                : null,
+            leading: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: Checkbox(
+                value: item.isPurchased,
+                onChanged: (value) async {
+                  // チェック状態を更新
+                  await ref
+                      .read(shoppingListProvider.notifier)
+                      .togglePurchaseStatusForGroup(
+                        item.id,
+                        value ?? false,
+                        item.groupId,
+                      );
+                  // プロバイダーを無効化して再読み込み
+                  ref.invalidate(groupItemsProvider(item.groupId));
+                },
+                activeColor: themeColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            trailing: _isEditMode
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildAnimatedIconButton(
+                        onPressed: () => _showEditItemSheet(item),
+                        icon: Icons.edit,
+                        color: Colors.blue,
+                        tooltip: '編集',
+                      ),
+                      _buildAnimatedIconButton(
+                        onPressed: () => _showDeleteItemDialog(item),
+                        icon: Icons.delete,
+                        color: Colors.red,
+                        tooltip: '削除',
+                      ),
+                    ],
+                  )
+                : null,
+          ),
         ),
       ),
     );
@@ -392,9 +609,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
       if (result == true) {
         // 展開されているグループのアイテムを再読み込み
         if (_expandedGroups[group.id] == true) {
-          setState(() {
-            // 状態を更新してアイテムを再読み込み
-          });
+          ref.invalidate(groupItemsProvider(group.id));
         }
       }
     });
@@ -411,9 +626,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     ).then((result) {
       if (result == true) {
         // 展開されているグループのアイテムを再読み込み
-        setState(() {
-          // 状態を更新してアイテムを再読み込み
-        });
+        ref.invalidate(groupItemsProvider(item.groupId));
       }
     });
   }
@@ -457,6 +670,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
             onPressed: () {
               Navigator.of(context).pop();
               ref.read(shoppingListProvider.notifier).deleteItem(item.id);
+              ref.invalidate(groupItemsProvider(item.groupId));
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('削除'),

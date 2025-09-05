@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/controllers/auth_controller.dart';
 import 'package:outi_log/infrastructure/auth_indrastructure.dart';
+import 'package:outi_log/infrastructure/user_firestore_infrastructure.dart';
+import 'package:outi_log/infrastructure/storage_infrastructure.dart';
 import 'package:outi_log/provider/flutter_secure_storage_provider.dart';
 import 'package:outi_log/repository/login_repo.dart';
 import 'package:outi_log/utils/validate.dart';
 import 'package:outi_log/view/auth/create_account_screen.dart';
-import 'package:outi_log/view/auth/create_send_email_screen.dart';
 import 'package:outi_log/view/auth/forgot_password_screen.dart';
 import 'package:outi_log/view/component/common.dart';
-import 'package:outi_log/view/home_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -34,6 +34,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _authController = AuthController(
       AuthInfrastructure(),
       LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
+      UserFirestoreInfrastructure(),
+      StorageInfrastructure(),
     );
   }
 
@@ -63,6 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         email: _emailController.text,
         password: _passwordController.text,
         context: context,
+        ref: ref,
       );
 
       if (mounted) {

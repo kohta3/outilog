@@ -1,14 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:outi_log/constant/color.dart';
-import 'package:outi_log/controllers/scheduler_controller.dart';
-import 'package:outi_log/infrastructure/schedule_infrastructure.dart';
 import 'package:outi_log/models/schedule_model.dart';
 import 'package:outi_log/provider/schedule_firestore_provider.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
+import 'package:outi_log/infrastructure/space_infrastructure.dart';
 import 'package:outi_log/utils/format.dart';
 import 'package:outi_log/utils/schedule_util.dart' as schedule_util;
 import 'package:outi_log/view/component/common.dart';
+
+// スペースの参加ユーザーを取得するプロバイダー
+final spaceParticipantsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final currentSpace = ref.watch(firestoreSpacesProvider)?.currentSpace;
+  if (currentSpace == null) return [];
+
+  final spaceInfrastructure = SpaceInfrastructure();
+  try {
+    final spaceDetails =
+        await spaceInfrastructure.getSpaceDetails(currentSpace.id);
+    return spaceDetails?['participants'] ?? [];
+  } catch (e) {
+    print('Error loading space participants: $e');
+    return [];
+  }
+});
 
 class DialogComponent extends ConsumerStatefulWidget {
   final DateTime? selectedDate;
@@ -39,7 +55,7 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
   bool sixHoursBefore = false;
   bool twelveHoursBefore = false;
   bool oneDayBefore = false;
-  Map<String, bool> participationList = {'user1': true, 'user2': false};
+  Map<String, bool> participationList = {};
 
   final titleController = TextEditingController();
   final memoController = TextEditingController();
@@ -67,7 +83,10 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
       twelveHoursBefore = schedule.twelveHoursBefore;
       oneDayBefore = schedule.oneDayBefore;
       participationList = Map.from(schedule.participationList);
-      // 色設定は一時的に無効化
+      // 色設定
+      if (schedule.color != null) {
+        selectedColor = _hexToColor(schedule.color!);
+      }
     } else {
       // 新規作成の場合、選択された日付を設定
       if (widget.selectedDate != null) {
@@ -109,6 +128,18 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
     });
   }
 
+  void _showEndDateTimePicker() {
+    schedule_util.showDateTimePicker(context, endDateTime, (date) {
+      setState(() {
+        endDateTime = date;
+      });
+    }, (date) {
+      setState(() {
+        endDateTime = date;
+      });
+    });
+  }
+
   void _showDatePicker() {
     schedule_util.showDatePicker(context, startDateTime, (date) {
       setState(() {
@@ -122,6 +153,20 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
         // 開始日時を選択した日付の00:00に設定
         startDateTime = DateTime(date.year, date.month, date.day);
         // 終了日時も同じ日付の23:59に設定
+        endDateTime = DateTime(date.year, date.month, date.day, 23, 59);
+      });
+    });
+  }
+
+  void _showEndDatePicker() {
+    schedule_util.showDatePicker(context, endDateTime, (date) {
+      setState(() {
+        // 終了日時を選択した日付の23:59に設定
+        endDateTime = DateTime(date.year, date.month, date.day, 23, 59);
+      });
+    }, (date) {
+      setState(() {
+        // 終了日時を選択した日付の23:59に設定
         endDateTime = DateTime(date.year, date.month, date.day, 23, 59);
       });
     });
@@ -286,7 +331,7 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                           ? formatDate(endDateTime)
                           : formatDateTime(endDateTime),
                       4, () async {
-                    isAllDay ? _showDatePicker() : _showDateTimePicker();
+                    isAllDay ? _showEndDatePicker() : _showEndDateTimePicker();
                   }),
                 ],
               ),
@@ -294,28 +339,106 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
               Row(
                 children: [
                   sizedIconBox(Icons.person),
-                  Container(
-                    padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: participationList.entries
-                          .map((entry) => IconButton(
-                              style: IconButton.styleFrom(
-                                  backgroundColor:
-                                      entry.value ? Colors.white : Colors.grey,
-                                  shape: CircleBorder(),
-                                  side: BorderSide(
-                                      width: 4,
-                                      color: entry.value
-                                          ? themeColor
-                                          : Colors.grey),
-                                  padding: EdgeInsets.all(4)),
-                              onPressed: () {
-                                setState(() {
-                                  participationList[entry.key] = !entry.value;
-                                });
-                              },
-                              icon: Icon(Icons.person)))
-                          .toList(),
+                  Expanded(
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final participantsAsync =
+                            ref.watch(spaceParticipantsProvider);
+
+                        return participantsAsync.when(
+                          data: (participants) {
+                            if (participants.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  '参加ユーザーがいません',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              );
+                            }
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: participants.map((participant) {
+                                  final userId =
+                                      participant['user_id'] as String;
+                                  final userName =
+                                      participant['user_name'] as String;
+                                  final isSelected =
+                                      participationList[userId] ?? false;
+
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        participationList[userId] = !isSelected;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? themeColor
+                                            : Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? themeColor
+                                              : Colors.grey[300]!,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.person,
+                                            size: 16,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.grey[600],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            userName,
+                                            style: TextStyle(
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.grey[600],
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          },
+                          loading: () => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          error: (error, stack) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'ユーザー読み込みエラー',
+                              style: TextStyle(color: Colors.red[600]),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -492,6 +615,15 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                             endTime: endDateTime,
                             color: _colorToHex(selectedColor),
                             isAllDay: isAllDay,
+                            fiveMinutesBefore: fiveMinutesBefore,
+                            tenMinutesBefore: tenMinutesBefore,
+                            thirtyMinutesBefore: thirtyMinutesBefore,
+                            oneHourBefore: oneHourBefore,
+                            threeHoursBefore: threeHoursBefore,
+                            sixHoursBefore: sixHoursBefore,
+                            twelveHoursBefore: twelveHoursBefore,
+                            oneDayBefore: oneDayBefore,
+                            participationList: participationList,
                           );
                     } else {
                       // 新規作成モード - 予定を追加
@@ -504,6 +636,15 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                             endTime: endDateTime,
                             color: _colorToHex(selectedColor),
                             isAllDay: isAllDay,
+                            fiveMinutesBefore: fiveMinutesBefore,
+                            tenMinutesBefore: tenMinutesBefore,
+                            thirtyMinutesBefore: thirtyMinutesBefore,
+                            oneHourBefore: oneHourBefore,
+                            threeHoursBefore: threeHoursBefore,
+                            sixHoursBefore: sixHoursBefore,
+                            twelveHoursBefore: twelveHoursBefore,
+                            oneDayBefore: oneDayBefore,
+                            participationList: participationList,
                           );
                     }
 
@@ -541,26 +682,6 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                       ),
                     );
                   }
-
-                  // 従来のローカル保存も並行して実行（移行期間用）
-                  SchedulerController(ScheduleInfrastructure())
-                      .addSchedule(ScheduleModel(
-                    title: titleController.text,
-                    startDateTime: startDateTime,
-                    endDateTime: endDateTime,
-                    memo: memoController.text,
-                    isAllDay: isAllDay,
-                    fiveMinutesBefore: fiveMinutesBefore,
-                    tenMinutesBefore: tenMinutesBefore,
-                    thirtyMinutesBefore: thirtyMinutesBefore,
-                    oneHourBefore: oneHourBefore,
-                    threeHoursBefore: threeHoursBefore,
-                    sixHoursBefore: sixHoursBefore,
-                    twelveHoursBefore: twelveHoursBefore,
-                    oneDayBefore: oneDayBefore,
-                    participationList: participationList,
-                    color: _colorToHex(selectedColor),
-                  ));
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: themeColor,

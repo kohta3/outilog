@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/constant/genre.dart';
 import 'package:outi_log/utils/format.dart';
 import 'package:outi_log/view/component/householdBudget/graph/bar_chart.dart';
@@ -9,7 +8,7 @@ class HouseholdBudgetGraph extends StatefulWidget {
   HouseholdBudgetGraph(
       {super.key, required this.data, required this.currentDate});
   final Map<String, List<Map<String, String>>> data;
-  DateTime currentDate;
+  final DateTime currentDate;
   @override
   State<HouseholdBudgetGraph> createState() => _HouseholdBudgetGraphState();
 }
@@ -47,13 +46,31 @@ class _HouseholdBudgetGraphState extends State<HouseholdBudgetGraph> {
                       100)
                   : 0;
 
+          // カテゴリーの色を使用
+          Color displayColor = getGenreColor(genre);
+
+          // 同じジャンルの最初のアイテムから色情報を取得
+          final genreItems =
+              currentData.where((item) => item['genre'] == genre).toList();
+          if (genreItems.isNotEmpty) {
+            final categoryColor = genreItems.first['color'] ?? '';
+            if (categoryColor.isNotEmpty) {
+              try {
+                displayColor = Color(
+                    int.parse(categoryColor.replaceFirst('#', ''), radix: 16));
+              } catch (e) {
+                displayColor = getGenreColor(genre);
+              }
+            }
+          }
+
           return Container(
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              color: getGenreColor(genre).withOpacity(0.1),
+              color: displayColor.withOpacity(0.1),
               border: Border.all(
-                color: getGenreColor(genre).withOpacity(0.3),
+                color: displayColor.withOpacity(0.3),
                 width: 1,
               ),
             ),
@@ -68,7 +85,7 @@ class _HouseholdBudgetGraphState extends State<HouseholdBudgetGraph> {
                       height: 8,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: getGenreColor(genre),
+                        color: displayColor,
                       ),
                     ),
                     SizedBox(width: 6),

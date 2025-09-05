@@ -20,6 +20,9 @@ class BarChartWidget extends StatelessWidget {
           .reduce((a, b) => a > b ? a : b);
     }
 
+    // 最大値を最小値1に設定してゼロ除算を防ぐ
+    if (maxAmount == 0) maxAmount = 1;
+
     return Column(
       children: [
         Padding(
@@ -33,7 +36,7 @@ class BarChartWidget extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                '各支出の合計',
+                '収支の合計',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -69,9 +72,8 @@ class BarChartWidget extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: List.generate(5, (index) {
-                            double value = maxAmount > 0
-                                ? (maxAmount * 1.2 / 4) * (4 - index).toDouble()
-                                : 20.0 * (4 - index).toDouble();
+                            double value =
+                                (maxAmount / 4) * (4 - index).toDouble();
                             return Padding(
                               padding: EdgeInsets.symmetric(vertical: 8),
                               child: Text(
@@ -99,7 +101,7 @@ class BarChartWidget extends StatelessWidget {
                             child: BarChart(
                               BarChartData(
                                 alignment: BarChartAlignment.spaceAround,
-                                maxY: maxAmount > 0 ? maxAmount * 1.2 : 100,
+                                maxY: maxAmount,
                                 minY: 0,
                                 barTouchData: BarTouchData(
                                   touchTooltipData: BarTouchTooltipData(
@@ -158,8 +160,7 @@ class BarChartWidget extends StatelessWidget {
                                 ),
                                 gridData: FlGridData(
                                   show: true,
-                                  horizontalInterval:
-                                      maxAmount > 0 ? maxAmount / 4 : 20,
+                                  horizontalInterval: maxAmount / 4,
                                   drawVerticalLine: false,
                                   getDrawingHorizontalLine: (value) {
                                     return FlLine(
@@ -174,15 +175,35 @@ class BarChartWidget extends StatelessWidget {
                                   final amount =
                                       double.tryParse(item['amount'] ?? '0') ??
                                           0;
+                                  final type = item['type'] ?? 'expense';
+
+                                  // 収入と支出で色を分ける
+                                  Color barColor;
+                                  if (type == 'income') {
+                                    barColor = Colors.green.withOpacity(0.8);
+                                  } else {
+                                    // カテゴリーの色を使用
+                                    final categoryColor =
+                                        item['color'] ?? '#2196F3';
+                                    try {
+                                      barColor = Color(int.parse(
+                                              categoryColor.replaceFirst(
+                                                  '#', ''),
+                                              radix: 16))
+                                          .withOpacity(0.8);
+                                    } catch (e) {
+                                      barColor =
+                                          getGenreColor(item['genre'] ?? '')
+                                              .withOpacity(0.8);
+                                    }
+                                  }
 
                                   return BarChartGroupData(
                                     x: index,
                                     barRods: [
                                       BarChartRodData(
                                         toY: amount,
-                                        color:
-                                            getGenreColor(item['genre'] ?? '')
-                                                .withOpacity(0.8),
+                                        color: barColor,
                                         width: 24,
                                         borderRadius: BorderRadius.vertical(
                                           top: Radius.circular(4),

@@ -16,6 +16,7 @@ class TransactionFirestoreInfrastructure {
     required String createdBy,
     String? description,
     String? receipt_url,
+    String? color, // 色情報（16進数文字列）
   }) async {
     try {
       final transactionRef =
@@ -31,6 +32,7 @@ class TransactionFirestoreInfrastructure {
         'transaction_date': Timestamp.fromDate(transactionDate),
         'description': description ?? '',
         'receipt_url': receipt_url,
+        'color': color, // 色情報を保存
         'created_by': createdBy,
         'created_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
@@ -156,6 +158,7 @@ class TransactionFirestoreInfrastructure {
     DateTime? transactionDate,
     String? description,
     String? receiptUrl,
+    String? color, // 色情報を追加
   }) async {
     try {
       // 取引の存在確認と権限チェック
@@ -186,6 +189,7 @@ class TransactionFirestoreInfrastructure {
         updateData['transaction_date'] = Timestamp.fromDate(transactionDate);
       if (description != null) updateData['description'] = description;
       if (receiptUrl != null) updateData['receipt_url'] = receiptUrl;
+      if (color != null) updateData['color'] = color;
 
       await _firestore
           .collection(_transactionsCollection)

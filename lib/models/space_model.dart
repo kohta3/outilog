@@ -49,6 +49,7 @@ class SpaceModel {
   final String ownerId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? headerImageUrl;
 
   SpaceModel({
     required this.id,
@@ -57,18 +58,25 @@ class SpaceModel {
     required this.ownerId,
     required this.createdAt,
     required this.updatedAt,
+    this.headerImageUrl,
   });
 
   factory SpaceModel.fromJson(Map<String, dynamic> json) {
+    final headerImageUrl = json['header_image_url'] ?? json['headerImageUrl'];
+    print('DEBUG: SpaceModel.fromJson - header_image_url: $headerImageUrl');
+    print('DEBUG: SpaceModel.fromJson - json keys: ${json.keys.toList()}');
+
     return SpaceModel(
       id: json['id'],
-      spaceName: json['spaceName'],
-      sharedUsers: (json['sharedUsers'] as List<dynamic>)
-          .map((user) => SharedUser.fromJson(user as Map<String, dynamic>))
-          .toList(),
-      ownerId: json['ownerId'],
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      spaceName: json['space_name'] ?? json['spaceName'],
+      sharedUsers: (json['sharedUsers'] as List<dynamic>?)
+              ?.map((user) => SharedUser.fromJson(user as Map<String, dynamic>))
+              .toList() ??
+          [],
+      ownerId: json['owner_id'] ?? json['ownerId'],
+      createdAt: DateTime.parse(json['created_at'] ?? json['createdAt']),
+      updatedAt: DateTime.parse(json['updated_at'] ?? json['updatedAt']),
+      headerImageUrl: headerImageUrl,
     );
   }
 
@@ -80,6 +88,7 @@ class SpaceModel {
       'ownerId': ownerId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'headerImageUrl': headerImageUrl,
     };
   }
 
@@ -90,6 +99,7 @@ class SpaceModel {
     String? ownerId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? headerImageUrl,
   }) {
     return SpaceModel(
       id: id ?? this.id,
@@ -98,6 +108,7 @@ class SpaceModel {
       ownerId: ownerId ?? this.ownerId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      headerImageUrl: headerImageUrl ?? this.headerImageUrl,
     );
   }
 }

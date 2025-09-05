@@ -235,6 +235,19 @@ class FirestoreSpaceRepo {
     }
   }
 
+  /// 招待コードを取得（なければ作成）
+  Future<String> getOrCreateInviteCode(String spaceId, String userId) async {
+    try {
+      return await _inviteInfrastructure.getOrCreateInviteCode(
+        spaceId: spaceId,
+        createdBy: userId,
+      );
+    } catch (e) {
+      debugPrint('DEBUG: Error getting/creating invite code: $e');
+      rethrow;
+    }
+  }
+
   /// スペースの詳細情報を取得
   Future<Map<String, dynamic>?> getSpaceDetails(String spaceId) async {
     try {
@@ -242,6 +255,18 @@ class FirestoreSpaceRepo {
     } catch (e) {
       debugPrint('DEBUG: Error getting space details: $e');
       return null;
+    }
+  }
+
+  /// スペースのヘッダー画像URLを更新
+  Future<bool> updateSpaceHeaderImage(
+      String spaceId, String? headerImageUrl) async {
+    try {
+      return await _spaceInfrastructure.updateSpaceHeaderImage(
+          spaceId, headerImageUrl);
+    } catch (e) {
+      debugPrint('DEBUG: Error updating space header image: $e');
+      return false;
     }
   }
 
@@ -257,6 +282,9 @@ class FirestoreSpaceRepo {
   SpaceModel _convertFirestoreToSpaceModel(Map<String, dynamic> firestoreData) {
     // 参加者情報は別途取得する必要がある場合もあるが、
     // 基本的なスペース情報のみを使用する簡易版
+    print(
+        'DEBUG: _convertFirestoreToSpaceModel - header_image_url: ${firestoreData['header_image_url']}');
+
     return SpaceModel(
       id: firestoreData['id'],
       spaceName: firestoreData['space_name'],
@@ -264,6 +292,7 @@ class FirestoreSpaceRepo {
       ownerId: firestoreData['owner_id'],
       createdAt: firestoreData['created_at']?.toDate() ?? DateTime.now(),
       updatedAt: firestoreData['updated_at']?.toDate() ?? DateTime.now(),
+      headerImageUrl: firestoreData['header_image_url'],
     );
   }
 

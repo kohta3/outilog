@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/constant/genre.dart';
 import 'package:outi_log/utils/format.dart';
+import 'package:outi_log/infrastructure/transaction_firestore_infrastructure.dart';
+import 'package:outi_log/utils/toast.dart';
+import 'package:outi_log/view/component/householdBudget/edit_transaction_bottom_sheet.dart';
+import 'package:outi_log/provider/auth_provider.dart';
+import 'package:outi_log/provider/firestore_space_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class HouseholdBudgetList extends StatefulWidget {
-  const HouseholdBudgetList(
-      {super.key, required this.data, required this.currentDate});
+class HouseholdBudgetList extends ConsumerStatefulWidget {
+  const HouseholdBudgetList({
+    super.key,
+    required this.data,
+    required this.currentDate,
+    this.onDataChanged,
+  });
   final Map<String, List<Map<String, String>>> data;
   final DateTime currentDate;
+  final VoidCallback? onDataChanged; // データ変更時のコールバック
 
   @override
-  State<HouseholdBudgetList> createState() => _HouseholdBudgetListState();
+  ConsumerState<HouseholdBudgetList> createState() =>
+      _HouseholdBudgetListState();
 }
 
-class _HouseholdBudgetListState extends State<HouseholdBudgetList> {
+class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
   late DateTime _currentDate;
+  final TransactionFirestoreInfrastructure _transactionInfrastructure =
+      TransactionFirestoreInfrastructure();
 
   @override
   void initState() {
@@ -29,6 +42,173 @@ class _HouseholdBudgetListState extends State<HouseholdBudgetList> {
       setState(() {
         _currentDate = widget.currentDate;
       });
+    }
+  }
+
+  void _showTransactionOptions(BuildContext context, Map<String, String> item) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '取引を選択',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildActionButton(
+                  context,
+                  icon: Icons.edit,
+                  label: '編集',
+                  color: Colors.blue,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _editTransaction(context, item);
+                  },
+                ),
+                _buildActionButton(
+                  context,
+                  icon: Icons.delete,
+                  label: '削除',
+                  color: Colors.red,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteTransaction(context, item);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editTransaction(BuildContext context, Map<String, String> item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return EditTransactionBottomSheet(
+          transactionData: item,
+          onDataChanged: widget.onDataChanged,
+        );
+      },
+    );
+  }
+
+  void _deleteTransaction(BuildContext context, Map<String, String> item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('削除確認'),
+        content: const Text('この取引を削除しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _performDelete(item);
+            },
+            child: const Text('削除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performDelete(Map<String, String> item) async {
+    try {
+      final transactionId = item['id'] ?? '';
+      if (transactionId.isEmpty) {
+        Toast.show(context, '取引IDが見つかりません');
+        return;
+      }
+
+      final currentUser = ref.read(currentUserProvider);
+      final spaceState = ref.read(firestoreSpacesProvider);
+      final currentSpace = spaceState?.currentSpace;
+
+      if (currentUser == null || currentSpace == null) {
+        Toast.show(context, 'ユーザーまたはスペース情報が見つかりません');
+        return;
+      }
+
+      await _transactionInfrastructure.deleteTransaction(
+        transactionId: transactionId,
+        spaceId: currentSpace.id,
+        userId: currentUser.uid,
+      );
+      Toast.show(context, '取引を削除しました');
+
+      // 親ウィジェットに削除完了を通知
+      if (mounted && widget.onDataChanged != null) {
+        widget.onDataChanged!();
+      }
+    } catch (e) {
+      Toast.show(context, '削除に失敗しました: $e');
     }
   }
 
@@ -110,6 +290,47 @@ class _HouseholdBudgetListState extends State<HouseholdBudgetList> {
                         final genre = item['genre'] ?? '';
                         final amount =
                             double.tryParse(item['amount'] ?? '0') ?? 0;
+                        final type = item['type'] ?? 'expense';
+                        final dateString = item['date'] ?? '';
+                        final title = item['title'] ?? '';
+
+                        // 日付をパース
+                        DateTime? transactionDate;
+                        if (dateString.isNotEmpty) {
+                          try {
+                            transactionDate = DateTime.parse(dateString);
+                          } catch (e) {
+                            print('Error parsing date: $e');
+                          }
+                        }
+
+                        // 収入と支出で表示を分ける
+                        final isIncome = type == 'income';
+                        final displayAmount = isIncome
+                            ? '+${formatCurrency(amount)}円'
+                            : '-${formatCurrency(amount)}円';
+                        final amountColor =
+                            isIncome ? Colors.green[600] : Colors.red[600];
+
+                        // カテゴリーの色を使用
+                        Color displayColor;
+                        if (isIncome) {
+                          displayColor = Colors.green;
+                        } else {
+                          final categoryColor = item['color'] ?? '#2196F3';
+                          try {
+                            displayColor = Color(int.parse(
+                                categoryColor.replaceFirst('#', ''),
+                                radix: 16));
+                          } catch (e) {
+                            displayColor = getGenreColor(genre);
+                          }
+                        }
+
+                        final iconColor = displayColor;
+                        final backgroundColor = displayColor.withOpacity(0.1);
+                        final icon =
+                            isIncome ? Icons.trending_up : getGenreIcon(genre);
 
                         return Container(
                           margin: EdgeInsets.only(bottom: 12),
@@ -125,6 +346,7 @@ class _HouseholdBudgetListState extends State<HouseholdBudgetList> {
                             ],
                           ),
                           child: ListTile(
+                            onTap: () => _showTransactionOptions(context, item),
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 20,
                               vertical: 12,
@@ -134,35 +356,53 @@ class _HouseholdBudgetListState extends State<HouseholdBudgetList> {
                               height: 40,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: getGenreColor(genre).withOpacity(0.1),
+                                color: backgroundColor,
                               ),
                               child: Icon(
-                                getGenreIcon(genre),
-                                color: getGenreColor(genre),
+                                icon,
+                                color: iconColor,
                                 size: 20,
                               ),
                             ),
                             title: Text(
-                              genre,
+                              title.isNotEmpty
+                                  ? title
+                                  : (isIncome ? '収入' : genre),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.grey[800],
                               ),
                             ),
-                            subtitle: Text(
-                              '${formatMonthJp(_currentDate)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[500],
-                              ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isIncome ? '収入' : genre,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  transactionDate != null
+                                      ? '${transactionDate.month}/${transactionDate.day}'
+                                      : '${formatMonthJp(_currentDate)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
                             ),
                             trailing: Text(
-                              '-${formatCurrency(amount)}円',
+                              displayAmount,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.red[600],
+                                color: amountColor,
                               ),
                             ),
                           ),

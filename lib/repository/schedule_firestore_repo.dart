@@ -50,6 +50,15 @@ class ScheduleFirestoreRepo {
     required String color,
     required String createdBy,
     bool isAllDay = false,
+    bool fiveMinutesBefore = false,
+    bool tenMinutesBefore = false,
+    bool thirtyMinutesBefore = false,
+    bool oneHourBefore = false,
+    bool threeHoursBefore = false,
+    bool sixHoursBefore = false,
+    bool twelveHoursBefore = false,
+    bool oneDayBefore = false,
+    Map<String, bool> participationList = const {},
   }) async {
     try {
       await _infrastructure.addSchedule(
@@ -61,6 +70,15 @@ class ScheduleFirestoreRepo {
         color: color,
         createdBy: createdBy,
         isAllDay: isAllDay,
+        fiveMinutesBefore: fiveMinutesBefore,
+        tenMinutesBefore: tenMinutesBefore,
+        thirtyMinutesBefore: thirtyMinutesBefore,
+        oneHourBefore: oneHourBefore,
+        threeHoursBefore: threeHoursBefore,
+        sixHoursBefore: sixHoursBefore,
+        twelveHoursBefore: twelveHoursBefore,
+        oneDayBefore: oneDayBefore,
+        participationList: participationList,
       );
       return true;
     } catch (e) {
@@ -80,6 +98,15 @@ class ScheduleFirestoreRepo {
     DateTime? endTime,
     String? color,
     bool? isAllDay,
+    bool? fiveMinutesBefore,
+    bool? tenMinutesBefore,
+    bool? thirtyMinutesBefore,
+    bool? oneHourBefore,
+    bool? threeHoursBefore,
+    bool? sixHoursBefore,
+    bool? twelveHoursBefore,
+    bool? oneDayBefore,
+    Map<String, bool>? participationList,
   }) async {
     try {
       return await _infrastructure.updateSchedule(
@@ -92,6 +119,15 @@ class ScheduleFirestoreRepo {
         endTime: endTime,
         color: color,
         isAllDay: isAllDay,
+        fiveMinutesBefore: fiveMinutesBefore,
+        tenMinutesBefore: tenMinutesBefore,
+        thirtyMinutesBefore: thirtyMinutesBefore,
+        oneHourBefore: oneHourBefore,
+        threeHoursBefore: threeHoursBefore,
+        sixHoursBefore: sixHoursBefore,
+        twelveHoursBefore: twelveHoursBefore,
+        oneDayBefore: oneDayBefore,
+        participationList: participationList,
       );
     } catch (e) {
       print('DEBUG: Error updating schedule: $e');

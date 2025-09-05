@@ -9,6 +9,7 @@ import 'package:outi_log/view/component/householdBudget/household_budget_graph.d
 import 'package:outi_log/view/component/householdBudget/household_budget_list.dart';
 import 'package:outi_log/infrastructure/transaction_firestore_infrastructure.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
+import 'package:outi_log/provider/category_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -51,8 +52,8 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
       final transactions = await _transactionInfrastructure
           .getSpaceTransactions(currentSpace.id);
 
-      // データを月別に整理
-      final Map<String, Map<String, double>> monthlyData = {};
+      // データを月別に整理（支出と収入を分けて管理）
+      final Map<String, List<Map<String, String>>> formattedData = {};
 
       for (final transaction in transactions) {
         final transactionDate =
@@ -62,26 +63,40 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
         final amount = (transaction['amount'] as num).toDouble();
         final type = transaction['type'] as String;
 
-        // 支出のみを表示（収入は別途処理）
-        if (type == 'expense') {
-          if (!monthlyData.containsKey(monthKey)) {
-            monthlyData[monthKey] = {};
+        // 支出と収入の両方を表示
+        if (type == 'expense' || type == 'income') {
+          if (!formattedData.containsKey(monthKey)) {
+            formattedData[monthKey] = [];
           }
-          monthlyData[monthKey]![category] =
-              (monthlyData[monthKey]![category] ?? 0) + amount;
+
+          // カテゴリーの色情報を取得
+          String categoryColor = '';
+          if (type == 'expense') {
+            final categoryState = ref.read(categoryProvider);
+            final expenseCategory = categoryState.expenseCategories
+                .where((c) => c.name == category)
+                .firstOrNull;
+            categoryColor = expenseCategory?.color ?? '#2196F3';
+          } else {
+            final categoryState = ref.read(categoryProvider);
+            final incomeCategory = categoryState.incomeCategories
+                .where((c) => c.name == category)
+                .firstOrNull;
+            categoryColor = incomeCategory?.color ?? '#4CAF50';
+          }
+
+          formattedData[monthKey]!.add({
+            'id': transaction['id'] ?? '', // 取引IDを追加
+            'genre': category,
+            'amount': amount.toInt().toString(),
+            'type': type,
+            'date': transactionDate.toIso8601String(),
+            'title': transaction['title'] ?? '',
+            'description': transaction['description'] ?? '', // メモ情報を追加
+            'color': categoryColor, // カテゴリーの色情報を追加
+          });
         }
       }
-
-      // 表示用のデータ形式に変換
-      final Map<String, List<Map<String, String>>> formattedData = {};
-      monthlyData.forEach((month, categories) {
-        formattedData[month] = categories.entries
-            .map((entry) => {
-                  'genre': entry.key,
-                  'amount': entry.value.toInt().toString(),
-                })
-            .toList();
-      });
 
       setState(() {
         data = formattedData;
@@ -169,7 +184,10 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
                           data: data, currentDate: _currentDate),
                       // リストタブ
                       HouseholdBudgetList(
-                          data: data, currentDate: _currentDate),
+                        data: data,
+                        currentDate: _currentDate,
+                        onDataChanged: _loadTransactionData,
+                      ),
                     ],
                   ),
           ),

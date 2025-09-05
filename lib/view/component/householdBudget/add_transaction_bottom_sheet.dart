@@ -9,6 +9,31 @@ import 'package:outi_log/provider/category_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// カンマ区切り数値入力フォーマッター
+class _NumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // 数字のみを抽出
+    String digitsOnly = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (digitsOnly.isEmpty) {
+      return const TextEditingValue(text: '');
+    }
+
+    // 数値に変換してカンマ区切りでフォーマット
+    int number = int.parse(digitsOnly);
+    String formatted = NumberFormat('#,###').format(number);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
 class AddTransactionBottomSheet extends ConsumerStatefulWidget {
   final String transactionType; // '支出' or '収入'
 
@@ -64,7 +89,9 @@ class _AddTransactionBottomSheetState
       return;
     }
 
-    final amount = double.tryParse(_amountController.text);
+    // カンマを除去してから数値に変換
+    final amountText = _amountController.text.replaceAll(',', '');
+    final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
       Toast.show(context, '有効な金額を入力してください');
       return;
@@ -169,6 +196,9 @@ class _AddTransactionBottomSheetState
     return Padding(
       padding: MediaQuery.of(context).viewInsets,
       child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
         padding: EdgeInsets.only(
           top: 12,
           left: 20,
@@ -179,76 +209,79 @@ class _AddTransactionBottomSheetState
           color: backgroundColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TabBar(
-              controller: _tabController,
-              labelColor: primaryColor,
-              unselectedLabelColor: secondaryTextColor,
-              indicatorColor: primaryColor,
-              indicatorSize: TabBarIndicatorSize.tab,
-              onTap: (index) {
-                setState(() {
-                  final categoryState = ref.read(categoryProvider);
-                  if (index == 0) {
-                    // 支出タブ
-                    if (categoryState.expenseCategories.isNotEmpty) {
-                      _selectedMainCategory =
-                          categoryState.expenseCategories.first.id;
-                      _selectedSubCategory = null;
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TabBar(
+                controller: _tabController,
+                labelColor: primaryColor,
+                unselectedLabelColor: secondaryTextColor,
+                indicatorColor: primaryColor,
+                indicatorSize: TabBarIndicatorSize.tab,
+                onTap: (index) {
+                  setState(() {
+                    final categoryState = ref.read(categoryProvider);
+                    if (index == 0) {
+                      // 支出タブ
+                      if (categoryState.expenseCategories.isNotEmpty) {
+                        _selectedMainCategory =
+                            categoryState.expenseCategories.first.id;
+                        _selectedSubCategory = null;
+                      }
+                    } else {
+                      // 収入タブ
+                      if (categoryState.incomeCategories.isNotEmpty) {
+                        _selectedMainCategory =
+                            categoryState.incomeCategories.first.id;
+                        _selectedSubCategory = null; // 収入はカテゴリーなし
+                      }
                     }
-                  } else {
-                    // 収入タブ
-                    if (categoryState.incomeCategories.isNotEmpty) {
-                      _selectedMainCategory =
-                          categoryState.incomeCategories.first.id;
-                      _selectedSubCategory = null; // 収入はカテゴリーなし
-                    }
-                  }
-                });
-              },
-              tabs: const [
-                Tab(text: '支出'),
-                Tab(text: '収入'),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildLabeledField('金額', _buildAmountField()),
-            const SizedBox(height: 16),
-            _buildLabeledField('メモ', _buildTextField(_memoController, 'メモ')),
-            const SizedBox(height: 16),
-            _buildLabeledField('分類', _buildMainCategoryDropdown()),
-            const SizedBox(height: 16),
-            // 支出の場合のみカテゴリーを表示
-            if (_tabController.index == 0) ...[
-              _buildLabeledField('カテゴリー', _buildSubCategoryDropdown()),
-              const SizedBox(height: 16),
-            ],
-            _buildLabeledField('日付', _buildDateField()),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: _isSaving ? null : _saveTransaction,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green,
-                side: const BorderSide(color: themeColor),
-                minimumSize: const Size(double.infinity, 52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                  });
+                },
+                tabs: const [
+                  Tab(text: '支出'),
+                  Tab(text: '収入'),
+                ],
               ),
-              child: _isSaving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                      ),
-                    )
-                  : const Text('保存する'),
-            ),
-          ],
+              const SizedBox(height: 24),
+              _buildLabeledField('金額', _buildAmountField()),
+              const SizedBox(height: 16),
+              _buildLabeledField('メモ', _buildTextField(_memoController, 'メモ')),
+              const SizedBox(height: 16),
+              _buildLabeledField('分類', _buildMainCategoryDropdown()),
+              const SizedBox(height: 16),
+              // 支出の場合のみカテゴリーを表示
+              if (_tabController.index == 0) ...[
+                _buildLabeledField('カテゴリー', _buildSubCategoryDropdown()),
+                const SizedBox(height: 16),
+              ],
+              _buildLabeledField('日付', _buildDateField()),
+              const SizedBox(height: 24),
+              OutlinedButton(
+                onPressed: _isSaving ? null : _saveTransaction,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.green,
+                  side: const BorderSide(color: themeColor),
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.green),
+                        ),
+                      )
+                    : const Text('保存する'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -294,7 +327,9 @@ class _AddTransactionBottomSheetState
       ),
       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      inputFormatters: [
+        _NumberInputFormatter(),
+      ],
     );
   }
 

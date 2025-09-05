@@ -366,28 +366,28 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      _getScheduleColor(index).withOpacity(0.9),
-                      _getScheduleColor(index).withOpacity(0.6),
+                      _getScheduleColor(schedule).withOpacity(0.9),
+                      _getScheduleColor(schedule).withOpacity(0.6),
                     ],
                   )
                 : LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      _getScheduleColor(index),
-                      _getScheduleColor(index).withOpacity(0.8),
+                      _getScheduleColor(schedule),
+                      _getScheduleColor(schedule).withOpacity(0.8),
                     ],
                   ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: schedule.isAllDay
-                  ? _getScheduleColor(index).withOpacity(0.3)
-                  : _getScheduleColor(index).withOpacity(0.2),
+                  ? _getScheduleColor(schedule).withOpacity(0.3)
+                  : _getScheduleColor(schedule).withOpacity(0.2),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: _getScheduleColor(index).withOpacity(0.4),
+                color: _getScheduleColor(schedule).withOpacity(0.4),
                 blurRadius: 12,
                 offset: Offset(0, 6),
               ),
@@ -493,19 +493,33 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
     );
   }
 
-  Color _getScheduleColor(int index) {
+  Color _getScheduleColor(ScheduleModel schedule) {
+    if (schedule.color != null && schedule.color!.isNotEmpty) {
+      return _hexToColor(schedule.color!);
+    }
+    // 色が設定されていない場合はタイトルのハッシュから色を生成
     final colors = [
-      Color(0xFF667eea), // 紫青グラデーション
-      Color(0xFF48bb78), // エメラルドグリーン
-      Color(0xFFf093fb), // ピンクパープル
-      Color(0xFF4facfe), // ライトブルー
-      Color(0xFFf6d365), // サンセットオレンジ
-      Color(0xFF667eea), // インディゴ
-      Color(0xFF84fab0), // ミントグリーン
-      Color(0xFFfad0c4), // ピーチピンク
-      Color(0xFF74b9ff), // スカイブルー
-      Color(0xFFfd79a8), // ローズピンク
+      Color(0xFF375E97), // ダークブルー
+      Color(0xFFFB6542), // オレンジレッド
+      Color(0xFF3F681C), // ダークグリーン
+      Color(0xFF6FB98F), // ミントグリーン
+      Color(0xFFF18D9E), // ピンク
+      Color(0xFF4CB5F5), // ライトブルー
+      Color(0xFFF4CC70), // イエロー
+      Color(0xFF8D230F), // ダークレッド
     ];
-    return colors[index % colors.length];
+    final index = schedule.title.hashCode.abs() % colors.length;
+    return colors[index];
+  }
+
+  Color _hexToColor(String hexColor) {
+    try {
+      // #を削除して16進数として解析
+      final hex = hexColor.replaceFirst('#', '');
+      return Color(int.parse('FF$hex', radix: 16));
+    } catch (e) {
+      // パースに失敗した場合はデフォルト色を返す
+      return Color(0xFF667eea);
+    }
   }
 }

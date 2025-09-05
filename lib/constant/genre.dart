@@ -88,43 +88,43 @@ const Map<String, List<String>> genreList = {
   ],
 };
 
+// カテゴリー名に基づいて一貫した色を生成する関数
 Color getGenreColor(String genre) {
-  switch (genre) {
-    case '収入':
-      return Color(0xFF4CAF50);
-    case '食費':
-      return Color(0xFFFF6B6B);
-    case '日用品':
-      return Color(0xFF4ECDC4);
-    case '交通費':
-      return Color(0xFF45B7D1);
-    case '住居費':
-      return Color(0xFF85C1E9);
-    case '水道・光熱費':
-      return Color(0xFF96CEB4);
-    case '通信費':
-      return Color(0xFF98D8C8);
-    case '保険':
-      return Color(0xFFF8C471);
-    case '医療・健康':
-      return Color(0xFFDDA0DD);
-    case '教育・学習':
-      return Color(0xFFF7DC6F);
-    case '交際費':
-      return Color(0xFFBB8FCE);
-    case '趣味・娯楽':
-      return Color(0xFFA9CCE3);
-    case '美容・衣服':
-      return Color(0xFFF8C471);
-    case '子ども関連':
-      return Color(0xFF85C1E9);
-    case '税金':
-      return Color(0xFFA9CCE3);
-    case 'その他':
-      return Color(0xFFBDC3C7);
-    default:
-      return Color(0xFFBDC3C7);
+  // 収入は常に緑色
+  if (genre == '収入') {
+    return Color(0xFF4CAF50);
   }
+
+  // カテゴリー名のハッシュ値を計算して色を生成
+  int hash = genre.hashCode;
+
+  // 鮮明で区別しやすい色のパレット
+  List<Color> colorPalette = [
+    Color(0xFFE91E63), // ピンク
+    Color(0xFF9C27B0), // 紫
+    Color(0xFF3F51B5), // インディゴ
+    Color(0xFF2196F3), // 青
+    Color(0xFF00BCD4), // シアン
+    Color(0xFF009688), // ティール
+    Color(0xFFFF9800), // オレンジ
+    Color(0xFF795548), // ブラウン
+    Color(0xFFFFC107), // アンバー
+    Color(0xFF607D8B), // ブルーグレー
+    Color(0xFF8BC34A), // ライトグリーン
+    Color(0xFF673AB7), // ディープパープル
+    Color(0xFFE91E63), // ピンク（重複）
+    Color(0xFF4CAF50), // 緑
+    Color(0xFFF44336), // 赤
+    Color(0xFF9E9E9E), // グレー
+    Color(0xFF424242), // ダークグレー
+    Color(0xFF795548), // ブラウン（重複）
+    Color(0xFF3F51B5), // インディゴ（重複）
+    Color(0xFF00BCD4), // シアン（重複）
+  ];
+
+  // ハッシュ値を使ってパレットから色を選択
+  int colorIndex = hash.abs() % colorPalette.length;
+  return colorPalette[colorIndex];
 }
 
 IconData getGenreIcon(String genre) {

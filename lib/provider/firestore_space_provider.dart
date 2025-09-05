@@ -51,6 +51,11 @@ class FirestoreSpacesNotifier extends StateNotifier<SpacesModel?> {
   }) async {
     if (_userId == null) return false;
 
+    // スペース制限チェック（参加と作成を合わせて2つまで）
+    if (state != null && state!.spaces.length >= 2) {
+      throw Exception('スペースの参加・作成上限（2個）に達しています');
+    }
+
     try {
       final spaceId = await _repo.addSpace(
         spaceName: spaceName,
@@ -144,6 +149,15 @@ class FirestoreSpacesNotifier extends StateNotifier<SpacesModel?> {
   }) async {
     if (_userId == null) return false;
 
+    // スペース制限チェック（参加と作成を合わせて2つまで）
+    print('DEBUG: joinSpaceWithInviteCode - state = $state');
+    print(
+        'DEBUG: joinSpaceWithInviteCode - state?.spaces.length = ${state?.spaces.length}');
+
+    if (state != null && state!.spaces.length >= 2) {
+      throw Exception('スペースの参加・作成上限（2個）に達しています');
+    }
+
     try {
       final success = await _repo.joinSpaceWithInviteCode(
         inviteCode: inviteCode,
@@ -178,6 +192,20 @@ class FirestoreSpacesNotifier extends StateNotifier<SpacesModel?> {
     }
   }
 
+  /// 招待コードを取得（なければ作成）
+  Future<String> getOrCreateInviteCode(String spaceId) async {
+    if (_userId == null) {
+      throw Exception('ユーザーがログインしていません');
+    }
+
+    try {
+      return await _repo.getOrCreateInviteCode(spaceId, _userId);
+    } catch (e) {
+      print('DEBUG: Error getting/creating invite code: $e');
+      rethrow;
+    }
+  }
+
   /// スペースの詳細情報を取得
   Future<Map<String, dynamic>?> getSpaceDetails(String spaceId) async {
     try {
@@ -185,6 +213,27 @@ class FirestoreSpacesNotifier extends StateNotifier<SpacesModel?> {
     } catch (e) {
       print('DEBUG: Error getting space details: $e');
       return null;
+    }
+  }
+
+  /// スペースのヘッダー画像URLを更新
+  Future<bool> updateSpaceHeaderImage(
+      String spaceId, String? headerImageUrl) async {
+    if (_userId == null) return false;
+
+    try {
+      final success =
+          await _repo.updateSpaceHeaderImage(spaceId, headerImageUrl);
+
+      if (success) {
+        // 状態を更新
+        await initializeSpaces();
+      }
+
+      return success;
+    } catch (e) {
+      print('DEBUG: Error updating space header image: $e');
+      return false;
     }
   }
 

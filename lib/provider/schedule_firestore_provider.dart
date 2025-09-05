@@ -48,6 +48,15 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
     required DateTime endTime,
     String color = '#2196F3',
     bool isAllDay = false,
+    bool fiveMinutesBefore = false,
+    bool tenMinutesBefore = false,
+    bool thirtyMinutesBefore = false,
+    bool oneHourBefore = false,
+    bool threeHoursBefore = false,
+    bool sixHoursBefore = false,
+    bool twelveHoursBefore = false,
+    bool oneDayBefore = false,
+    Map<String, bool> participationList = const {},
   }) async {
     if (_spaceId == null || _userId == null) {
       print('DEBUG: Cannot add schedule - missing spaceId or userId');
@@ -65,6 +74,15 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
         color: color,
         createdBy: _userId,
         isAllDay: isAllDay,
+        fiveMinutesBefore: fiveMinutesBefore,
+        tenMinutesBefore: tenMinutesBefore,
+        thirtyMinutesBefore: thirtyMinutesBefore,
+        oneHourBefore: oneHourBefore,
+        threeHoursBefore: threeHoursBefore,
+        sixHoursBefore: sixHoursBefore,
+        twelveHoursBefore: twelveHoursBefore,
+        oneDayBefore: oneDayBefore,
+        participationList: participationList,
       );
 
       if (success) {
@@ -88,6 +106,15 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
     DateTime? endTime,
     String? color,
     bool? isAllDay,
+    bool? fiveMinutesBefore,
+    bool? tenMinutesBefore,
+    bool? thirtyMinutesBefore,
+    bool? oneHourBefore,
+    bool? threeHoursBefore,
+    bool? sixHoursBefore,
+    bool? twelveHoursBefore,
+    bool? oneDayBefore,
+    Map<String, bool>? participationList,
   }) async {
     if (_spaceId == null || _userId == null) return false;
 
@@ -103,6 +130,15 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
         endTime: endTime,
         color: color,
         isAllDay: isAllDay,
+        fiveMinutesBefore: fiveMinutesBefore,
+        tenMinutesBefore: tenMinutesBefore,
+        thirtyMinutesBefore: thirtyMinutesBefore,
+        oneHourBefore: oneHourBefore,
+        threeHoursBefore: threeHoursBefore,
+        sixHoursBefore: sixHoursBefore,
+        twelveHoursBefore: twelveHoursBefore,
+        oneDayBefore: oneDayBefore,
+        participationList: participationList,
       );
 
       if (success) {
@@ -180,17 +216,36 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
     await _loadSchedules();
   }
 
-  /// 特定の日のスケジュールを取得
+  /// 特定の日のスケジュールを取得（複数日にまたがる予定も含む）
   List<ScheduleModel> getSchedulesForDate(DateTime date) {
     final targetDate = DateTime(date.year, date.month, date.day);
+    final targetDateEnd = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
     return state.where((schedule) {
-      final scheduleDate = DateTime(
-        schedule.startDateTime.year,
-        schedule.startDateTime.month,
-        schedule.startDateTime.day,
-      );
-      return scheduleDate.isAtSameMomentAs(targetDate);
+      // 終日予定の場合
+      if (schedule.isAllDay) {
+        final scheduleStartDate = DateTime(
+          schedule.startDateTime.year,
+          schedule.startDateTime.month,
+          schedule.startDateTime.day,
+        );
+        final scheduleEndDate = DateTime(
+          schedule.endDateTime.year,
+          schedule.endDateTime.month,
+          schedule.endDateTime.day,
+        );
+
+        // 対象日が予定の開始日から終了日の間に含まれるかチェック
+        return (targetDate.isAtSameMomentAs(scheduleStartDate) ||
+                targetDate.isAfter(scheduleStartDate)) &&
+            (targetDate.isAtSameMomentAs(scheduleEndDate) ||
+                targetDate.isBefore(scheduleEndDate));
+      } else {
+        // 時間指定予定の場合
+        // 対象日が予定の開始時刻から終了時刻の間に含まれるかチェック
+        return schedule.startDateTime.isBefore(targetDateEnd) &&
+            schedule.endDateTime.isAfter(targetDate);
+      }
     }).toList();
   }
 
@@ -199,21 +254,37 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
     return getSchedulesForDate(DateTime.now());
   }
 
-  /// 今週のスケジュールを取得
+  /// 今週のスケジュールを取得（複数日にまたがる予定も含む）
   List<ScheduleModel> get thisWeekSchedules {
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    final startOfWeek =
+        DateTime(now.year, now.month, now.day - now.weekday + 1);
+    final endOfWeek = startOfWeek
+        .add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
 
     return state.where((schedule) {
-      final scheduleDate = DateTime(
-        schedule.startDateTime.year,
-        schedule.startDateTime.month,
-        schedule.startDateTime.day,
-      );
-      return scheduleDate
-              .isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
-          scheduleDate.isBefore(endOfWeek.add(const Duration(days: 1)));
+      // 終日予定の場合
+      if (schedule.isAllDay) {
+        final scheduleStartDate = DateTime(
+          schedule.startDateTime.year,
+          schedule.startDateTime.month,
+          schedule.startDateTime.day,
+        );
+        final scheduleEndDate = DateTime(
+          schedule.endDateTime.year,
+          schedule.endDateTime.month,
+          schedule.endDateTime.day,
+        );
+
+        // 予定の期間が今週の期間と重なるかチェック
+        return scheduleStartDate.isBefore(endOfWeek) &&
+            scheduleEndDate.isAfter(startOfWeek);
+      } else {
+        // 時間指定予定の場合
+        // 予定の期間が今週の期間と重なるかチェック
+        return schedule.startDateTime.isBefore(endOfWeek) &&
+            schedule.endDateTime.isAfter(startOfWeek);
+      }
     }).toList();
   }
 

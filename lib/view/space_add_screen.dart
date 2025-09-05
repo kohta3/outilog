@@ -7,6 +7,7 @@ import 'package:outi_log/provider/auth_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/utils/toast.dart';
+import 'package:outi_log/view/space_invite_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SpaceAddScreen extends ConsumerStatefulWidget {
@@ -170,9 +171,32 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
 
   /// スペース作成成功時の処理
   void _handleSpaceCreationSuccess() {
-    _generateInviteCode();
     if (mounted) {
       Toast.show(context, 'スペースを作成しました');
+      // 招待コード画面に遷移
+      _navigateToInviteScreen();
+    }
+  }
+
+  /// 招待コード画面に遷移
+  void _navigateToInviteScreen() {
+    // 作成されたスペースのIDを取得
+    final firestoreSpaces = ref.read(firestoreSpacesProvider);
+    final currentSpace = firestoreSpaces?.currentSpace;
+
+    if (currentSpace != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SpaceInviteScreen(
+            spaceId: currentSpace.id,
+            spaceName: currentSpace.spaceName,
+          ),
+        ),
+      );
+    } else {
+      // フォールバック：従来の招待コード表示
+      _generateInviteCode();
       setState(() => _isSpaceCreated = true);
     }
   }
@@ -191,13 +215,6 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
     }
   }
 
-  /// メンバーを削除
-  void _removeMember(SharedUser member) {
-    setState(() {
-      _members.remove(member);
-    });
-  }
-
   // MARK: - UI Views
   @override
   Widget build(BuildContext context) {
@@ -206,11 +223,14 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
     final canCreateSpace = firestoreSpaces?.canCreateSpace ??
         ref.watch(spacesProvider.notifier).canCreateSpace;
 
+    // ローディング中は制限チェックを無視（上限ページを表示しない）
+    final shouldShowLimitReached = !_isLoading && !canCreateSpace;
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
-        child: _buildBody(canCreateSpace),
+        child: _buildBody(shouldShowLimitReached),
       ),
     );
   }
@@ -240,8 +260,8 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
   }
 
   /// メインコンテンツを構築
-  Widget _buildBody(bool canCreateSpace) {
-    if (!canCreateSpace) {
+  Widget _buildBody(bool shouldShowLimitReached) {
+    if (shouldShowLimitReached) {
       return _buildLimitReachedView();
     }
 
@@ -249,7 +269,42 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
       return _buildInviteCodeView();
     }
 
+    if (_isLoading) {
+      return _buildLoadingView();
+    }
+
     return _buildCreateSpaceView();
+  }
+
+  /// ローディングビュー
+  Widget _buildLoadingView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            const Text(
+              'スペースを作成中...',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'しばらくお待ちください',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// スペース作成制限に達した場合のビュー
@@ -440,6 +495,14 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(height: 4),
+        const Text(
+          'あなたが自動的にオーナーとして追加されます',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
         const SizedBox(height: 8),
         ..._members.map((member) => _buildMemberCard(member)).toList(),
       ],
@@ -485,10 +548,6 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
                 ),
               ],
             ),
-          ),
-          IconButton(
-            onPressed: () => _removeMember(member),
-            icon: const Icon(Icons.remove_circle, color: Colors.red),
           ),
         ],
       ),

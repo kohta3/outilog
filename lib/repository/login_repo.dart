@@ -1,4 +1,5 @@
 import 'package:outi_log/provider/flutter_secure_storage_provider.dart';
+import 'package:outi_log/models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final loginRepoProvider = Provider<LoginRepo>(
@@ -23,5 +24,19 @@ class LoginRepo {
 
   Future<void> logout() async {
     await _secureStorageController.deleteValue(key: 'isFirstLogin');
+    await _secureStorageController.clearUserCache();
+  }
+
+  // ユーザー情報のキャッシュ機能
+  Future<void> cacheUserData(UserModel user) async {
+    await _secureStorageController.cacheUserData(user);
+  }
+
+  Future<UserModel?> getCachedUserData() async {
+    return await _secureStorageController.getCachedUserData();
+  }
+
+  Future<void> clearUserCache() async {
+    await _secureStorageController.clearUserCache();
   }
 }

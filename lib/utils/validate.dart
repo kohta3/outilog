@@ -17,8 +17,7 @@ class Validate {
     if (password.isEmpty) {
       return passwordError;
     }
-    bool isVaild = RegExp(
-            r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$')
+    bool isVaild = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$')
         .hasMatch(password);
     if (!isVaild) {
       return passwordFormatError;

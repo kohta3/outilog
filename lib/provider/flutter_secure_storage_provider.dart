@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:outi_log/models/user_model.dart';
 
 part 'flutter_secure_storage_provider.g.dart';
 
@@ -30,5 +31,30 @@ class FlutterSecureStorageController extends _$FlutterSecureStorageController {
 
   Future<void> deleteAllValue() async {
     await storage.deleteAll();
+  }
+
+  // ユーザー情報のキャッシュ
+  static const String _userCacheKey = 'cached_user_data';
+
+  Future<void> cacheUserData(UserModel user) async {
+    await setValue(key: _userCacheKey, value: user.toJson());
+  }
+
+  Future<UserModel?> getCachedUserData() async {
+    final jsonString = await getValue(key: _userCacheKey);
+    if (jsonString != null && jsonString.isNotEmpty) {
+      try {
+        return UserModel.fromJson(jsonString);
+      } catch (e) {
+        // JSONパースに失敗した場合はキャッシュを削除
+        await deleteValue(key: _userCacheKey);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<void> clearUserCache() async {
+    await deleteValue(key: _userCacheKey);
   }
 }

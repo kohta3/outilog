@@ -272,6 +272,24 @@ class ShoppingListNotifier extends StateNotifier<ShoppingListState> {
     }
   }
 
+  // 特定のグループのアイテムの購入状態を切り替え
+  Future<void> togglePurchaseStatusForGroup(
+      String itemId, bool isPurchased, String groupId) async {
+    try {
+      await _infrastructure.togglePurchaseStatus(itemId, isPurchased);
+
+      // 該当するグループのアイテムを再読み込み
+      final items = await _infrastructure.getItemsByGroup(groupId);
+
+      // 状態を更新（選択中のグループが同じ場合のみ）
+      if (state.selectedGroup?.id == groupId) {
+        state = state.copyWith(items: items);
+      }
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
   // エラーをクリア
   void clearError() {
     state = state.copyWith(error: null);
@@ -310,4 +328,12 @@ final shoppingListProvider =
     StateNotifierProvider<ShoppingListNotifier, ShoppingListState>((ref) {
   final infrastructure = ref.watch(shoppingListInfrastructureProvider);
   return ShoppingListNotifier(infrastructure, ref);
+});
+
+// 特定のグループのアイテムを管理するプロバイダー
+final groupItemsProvider =
+    FutureProvider.family<List<ShoppingListItemModel>, String>(
+        (ref, groupId) async {
+  final infrastructure = ref.watch(shoppingListInfrastructureProvider);
+  return await infrastructure.getItemsByGroup(groupId);
 });

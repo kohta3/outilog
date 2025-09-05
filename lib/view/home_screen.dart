@@ -8,6 +8,7 @@ import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/transaction_provider.dart';
 import 'package:outi_log/view/component/app_drawer.dart';
+import 'package:outi_log/view/dashboard_screen.dart';
 import 'package:outi_log/view/household_budget.dart';
 import 'package:outi_log/view/schedule_screen.dart';
 import 'package:outi_log/view/shopping_list.dart';
@@ -26,6 +27,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   static const List<Widget> _screens = [
+    DashboardScreen(),
     ScheduleScreen(),
     AccountBookScreen(),
     ShoppingListScreen(),
@@ -51,10 +53,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _getAppBarTitle(int index) {
     switch (index) {
       case 0:
-        return 'スケジュール';
+        return 'ホーム';
       case 1:
-        return '家計簿';
+        return 'スケジュール';
       case 2:
+        return '家計簿';
+      case 3:
         return '買い物リスト';
       default:
         return 'おうちログ';
@@ -120,6 +124,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 selectedItemColor: themeColor,
                 unselectedItemColor: Colors.grey,
                 items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home),
+                    label: 'ホーム',
+                  ),
                   BottomNavigationBarItem(
                     icon: Icon(Icons.calendar_today),
                     label: 'スケジュール',

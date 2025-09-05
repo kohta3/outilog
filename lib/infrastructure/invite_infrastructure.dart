@@ -207,6 +207,32 @@ class InviteInfrastructure {
     }
   }
 
+  /// スペースの最新の有効な招待コードを取得（なければ作成）
+  Future<String> getOrCreateInviteCode({
+    required String spaceId,
+    required String createdBy,
+    int expirationDays = 7,
+  }) async {
+    try {
+      // 既存の有効な招待コードを取得
+      final existingInvites = await getSpaceInviteCodes(spaceId);
+
+      if (existingInvites.isNotEmpty) {
+        // 最新の招待コードを返す
+        return existingInvites.first['invite_code'] as String;
+      }
+
+      // 有効な招待コードがない場合は新規作成
+      return await createInviteCode(
+        spaceId: spaceId,
+        createdBy: createdBy,
+        expirationDays: expirationDays,
+      );
+    } catch (e) {
+      throw Exception('招待コードの取得・作成に失敗しました: $e');
+    }
+  }
+
   /// 招待コードを無効化
   Future<bool> deactivateInviteCode({
     required String inviteCode,

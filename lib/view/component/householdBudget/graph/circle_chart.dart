@@ -19,9 +19,23 @@ class _CircleChartWidgetState extends State<CircleChartWidget> {
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
-    // 合計値を計算
-    double total = widget.data
-        .fold(0.0, (sum, item) => sum + double.parse(item['amount'] ?? '0'));
+    // 収入と支出を分けて計算
+    double incomeTotal = 0.0;
+    double expenseTotal = 0.0;
+
+    for (final item in widget.data) {
+      final amount = double.parse(item['amount'] ?? '0');
+      final type = item['type'] ?? 'expense';
+
+      if (type == 'income') {
+        incomeTotal += amount;
+      } else {
+        expenseTotal += amount;
+      }
+    }
+
+    // 純利益（収入 - 支出）を計算
+    double netIncome = incomeTotal - expenseTotal;
 
     // データが空の場合の表示
     if (widget.data.isEmpty) {
@@ -75,14 +89,47 @@ class _CircleChartWidgetState extends State<CircleChartWidget> {
                       final item = entry.value;
                       final isTouched = index == touchedIndex;
                       double value = double.parse(item['amount'] ?? '0');
-                      double percentage = total > 0 ? (value / total * 100) : 0;
+                      // 円グラフの割合計算には総合計を使用
+                      double totalForPercentage = incomeTotal + expenseTotal;
+                      double percentage = totalForPercentage > 0
+                          ? (value / totalForPercentage * 100)
+                          : 0;
+                      final type = item['type'] ?? 'expense';
+
+                      // 収入と支出で色を分ける
+                      Color sectionColor;
+                      if (type == 'income') {
+                        sectionColor = Colors.green.withOpacity(0.8);
+                      } else {
+                        // カテゴリーの色を使用
+                        final categoryColor = item['color'] ?? '#2196F3';
+                        try {
+                          sectionColor = Color(int.parse(
+                                  categoryColor.replaceFirst('#', ''),
+                                  radix: 16))
+                              .withOpacity(0.8);
+                        } catch (e) {
+                          sectionColor = getGenreColor(item['genre'] ?? '')
+                              .withOpacity(0.8);
+                        }
+                      }
+
+                      // 表示用のタイトルを生成
+                      String displayTitle = '';
+                      if (percentage > 3) {
+                        if (type == 'income') {
+                          displayTitle =
+                              '収入\n${percentage.toStringAsFixed(1)}%';
+                        } else {
+                          displayTitle =
+                              '${item['genre']}\n${percentage.toStringAsFixed(1)}%';
+                        }
+                      }
+
                       return PieChartSectionData(
                         value: value,
-                        title: percentage > 3
-                            ? '${item['genre']}\n ${percentage.toStringAsFixed(1)}%'
-                            : '',
-                        color:
-                            getGenreColor(item['genre'] ?? '').withOpacity(0.8),
+                        title: displayTitle,
+                        color: sectionColor,
                         radius: isTouched ? width * 0.22 : width * 0.18,
                         titleStyle: TextStyle(
                           fontSize: percentage > 8 ? 12 : 10,
@@ -112,7 +159,7 @@ class _CircleChartWidgetState extends State<CircleChartWidget> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '合計',
+                          '収支',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -121,11 +168,11 @@ class _CircleChartWidgetState extends State<CircleChartWidget> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          formatCurrency(total),
+                          formatCurrency(netIncome),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: themeColor,
+                            color: netIncome >= 0 ? Colors.green : Colors.red,
                           ),
                         ),
                         Text(
@@ -161,7 +208,7 @@ class _CircleChartWidgetState extends State<CircleChartWidget> {
           ),
           SizedBox(width: 8),
           Text(
-            '支出の割合',
+            '収支の割合',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -199,7 +246,7 @@ class _CircleChartWidgetState extends State<CircleChartWidget> {
           ),
           SizedBox(height: 16),
           Text(
-            '今月の支出データはありません',
+            '今月の収支データはありません',
             style: TextStyle(fontSize: 16, color: secondaryTextColor),
           ),
         ],

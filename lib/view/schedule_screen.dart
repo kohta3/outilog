@@ -505,18 +505,15 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       return _hexToColor(schedule.color!);
     }
     // 色が設定されていない場合はタイトルのハッシュから色を生成
-    // リストとタイムラインの選択ボタンと同じ色系を使用
     final colors = [
-      Colors.blue[600]!, // 青（リストボタンと同じ）
-      Colors.blue[500]!, // 青（少し薄い）
-      Colors.blue[400]!, // 青（さらに薄い）
-      Colors.green[600]!, // 緑（タイムラインボタンと同じ）
-      Colors.green[500]!, // 緑（少し薄い）
-      Colors.green[400]!, // 緑（さらに薄い）
-      Colors.indigo[600]!, // インディゴ
-      Colors.teal[600]!, // ティール
-      Colors.purple[600]!, // 紫
-      Colors.orange[600]!, // オレンジ
+      Color(0xFF375E97), // ダークブルー
+      Color(0xFFFB6542), // オレンジレッド
+      Color(0xFF3F681C), // ダークグリーン
+      Color(0xFF6FB98F), // ミントグリーン
+      Color(0xFFF18D9E), // ピンク
+      Color(0xFF4CB5F5), // ライトブルー
+      Color(0xFFF4CC70), // イエロー
+      Color(0xFF8D230F), // ダークレッド
     ];
     final index = schedule.title.hashCode.abs() % colors.length;
     return colors[index];
