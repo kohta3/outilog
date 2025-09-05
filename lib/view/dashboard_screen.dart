@@ -5,6 +5,7 @@ import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/schedule_firestore_provider.dart';
+import 'package:outi_log/provider/auth_provider.dart';
 import 'package:outi_log/infrastructure/transaction_firestore_infrastructure.dart';
 import 'package:outi_log/view/space_add_screen.dart';
 import 'package:outi_log/utils/format.dart';
@@ -29,6 +30,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void initState() {
     super.initState();
     _loadDashboardData();
+
+    // スケジュールの初期化を追加
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeSchedules();
+    });
   }
 
   Future<void> _loadDashboardData() async {
@@ -74,6 +80,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  /// スケジュールの初期化処理
+  Future<void> _initializeSchedules() async {
+    try {
+      // スペースとユーザーが利用可能になるまで待機
+      final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+      final currentUser = ref.read(currentUserProvider);
+
+      if (currentSpace != null && currentUser != null) {
+        print('DEBUG: Initializing schedules for dashboard');
+        await ref.read(scheduleFirestoreProvider.notifier).reloadSchedules();
+      }
+    } catch (e) {
+      print('DEBUG: Error initializing schedules: $e');
     }
   }
 
@@ -570,14 +592,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 4),
         Card(
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
           child: Container(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(4.0),
             child: todaySchedules.isEmpty
                 ? const Center(
                     child: Text(
@@ -595,17 +617,65 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  // タイムライン表示を構築
+  // タイムライン表示を構築（改善版）
   Widget _buildTimelineView(List<dynamic> schedules) {
     // 終日予定と時間指定予定を分ける
     final allDaySchedules = schedules.where((s) => s.isAllDay).toList();
     final timedSchedules = schedules.where((s) => !s.isAllDay).toList();
 
+    // 予定が多い場合はリスト表示も提供
+    final totalSchedules = allDaySchedules.length + timedSchedules.length;
+
     return Column(
       children: [
+        // 表示切り替えボタン（予定が多い場合のみ表示）
+        if (totalSchedules > 6) _buildViewToggleButtons(),
+        const SizedBox(height: 8),
         // 統合タイムテーブル（終日予定 + 時間指定予定）
         _buildIntegratedTimeTable(allDaySchedules, timedSchedules),
       ],
+    );
+  }
+
+  // 表示切り替えボタンを構築
+  Widget _buildViewToggleButtons() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // タイムライン表示（現在の表示）
+                // 何もしない（既にタイムライン表示）
+              },
+              icon: const Icon(Icons.timeline, size: 16),
+              label: const Text('タイムライン'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[100],
+                foregroundColor: Colors.blue[700],
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () {
+                // リスト表示に切り替え（将来の実装）
+                // TODO: リスト表示の実装
+              },
+              icon: const Icon(Icons.list, size: 16),
+              label: const Text('リスト'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[600],
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -692,56 +762,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ヘッダー
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue[200]!, width: 1),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.schedule,
-                color: Colors.blue[600],
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '今日の予定',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue[600],
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${allDaySchedules.length + timedSchedules.length}件',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
         const SizedBox(height: 12),
-        // タイムテーブル
+        // タイムテーブル（改善版）
         Container(
-          height: 50 + // 時間軸の高さ
-              (allDaySchedules.length * 35) + // 終日予定の高さ（35px）
-              (_calculateMaxLanes(timedSchedules) * 35) + // 時間指定予定のレーン高さ（35px）
-              10, // 下部の余白
+          constraints: BoxConstraints(
+            minHeight: 100,
+            maxHeight: 300, // 最大高さを制限
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -755,340 +782,43 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: totalHours * 100.0 + 80, // 時間あたり100px + 余白
-                height: 50 +
-                    (allDaySchedules.length * 35) +
-                    (_calculateMaxLanes(timedSchedules) * 35) +
-                    10,
-                child: Stack(
-                  children: [
-                    // 横向き時間軸
-                    _buildHorizontalTimeAxis(safeStartHour, safeEndHour),
-                    // 終日予定バー
-                    ...allDaySchedules.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final schedule = entry.value;
-                      return _buildAllDayBar(schedule, index, totalHours);
-                    }),
-                    // 横向き予定バー
-                    ..._buildNonOverlappingScheduleBars(
-                        timedSchedules, safeStartHour),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 終日予定セクション（旧版）
-  Widget _buildAllDaySection(List<dynamic> allDaySchedules) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue[200]!, width: 1),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.event_available,
-                color: Colors.blue[600],
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '終日予定',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue[600],
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${allDaySchedules.length}件',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...allDaySchedules
-            .map((schedule) => _buildEnhancedAllDayItem(schedule)),
-      ],
-    );
-  }
-
-  // 改善された終日予定アイテム
-  Widget _buildEnhancedAllDayItem(dynamic schedule) {
-    final title = schedule.title ?? 'タイトルなし';
-    final memo = schedule.memo ?? '';
-    final color = _getScheduleColor(schedule);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 6,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.event_available,
-                        size: 16,
-                        color: color,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '終日',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: color,
+            child: Column(
+              children: [
+                // スクロール可能なタイムテーブル
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: SizedBox(
+                        width: totalHours * 100.0 + 80, // 時間あたり100px + 余白
+                        height: 50 +
+                            (allDaySchedules.length * 40) + // 終日予定の高さを少し増やす
+                            (_calculateMaxLanes(timedSchedules) *
+                                40) + // 時間指定予定のレーン高さを少し増やす
+                            20, // 下部の余白を増やす
+                        child: Stack(
+                          children: [
+                            // 横向き時間軸
+                            _buildHorizontalTimeAxis(
+                                safeStartHour, safeEndHour),
+                            // 終日予定バー
+                            ...allDaySchedules.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final schedule = entry.value;
+                              return _buildAllDayBar(
+                                  schedule, index, totalHours);
+                            }),
+                            // 横向き予定バー
+                            ..._buildNonOverlappingScheduleBars(
+                                timedSchedules, safeStartHour),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
                     ),
                   ),
-                  if (memo.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      memo,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.calendar_today,
-                size: 20,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 改善されたタイムテーブル表示
-  Widget _buildEnhancedTimeTable(List<dynamic> timedSchedules) {
-    // データが空の場合はデフォルト表示
-    if (timedSchedules.isEmpty) {
-      return const Center(
-        child: Text(
-          '時間指定の予定がありません',
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 14,
-          ),
-        ),
-      );
-    }
-
-    // 時間順にソート
-    timedSchedules.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
-
-    // 日をまたぐ予定があるかチェック
-    final hasMultiDaySchedules = timedSchedules.any((schedule) {
-      final startDate = DateTime(
-        schedule.startDateTime.year,
-        schedule.startDateTime.month,
-        schedule.startDateTime.day,
-      );
-      final endDate = DateTime(
-        schedule.endDateTime.year,
-        schedule.endDateTime.month,
-        schedule.endDateTime.day,
-      );
-      return !startDate.isAtSameMomentAs(endDate);
-    });
-
-    int safeStartHour, safeEndHour, totalHours;
-
-    if (hasMultiDaySchedules) {
-      // 日をまたぐ予定がある場合は24時間表示
-      safeStartHour = 0;
-      safeEndHour = 24;
-      totalHours = 24;
-    } else {
-      // 通常の予定の場合
-      final today = DateTime.now();
-      final todayStartOfDay =
-          DateTime(today.year, today.month, today.day, 0, 0, 0);
-      final todayEndOfDay =
-          DateTime(today.year, today.month, today.day, 23, 59, 59);
-
-      int minHour = 24;
-      int maxHour = 0;
-
-      for (final schedule in timedSchedules) {
-        // 今日の範囲内での有効な時間を計算
-        int scheduleStartHour = schedule.startDateTime.isBefore(todayStartOfDay)
-            ? 0
-            : schedule.startDateTime.hour;
-        int scheduleEndHour = schedule.endDateTime.isAfter(todayEndOfDay)
-            ? 24
-            : schedule.endDateTime.hour +
-                (schedule.endDateTime.minute > 0 ? 1 : 0);
-
-        minHour = min(minHour, scheduleStartHour);
-        maxHour = max(maxHour, scheduleEndHour);
-      }
-
-      // 最小6時間、最大24時間の範囲を確保
-      final calculatedStartHour = (minHour - 1).clamp(0, 23);
-      final calculatedEndHour = (maxHour + 1).clamp(6, 24);
-
-      safeStartHour = calculatedStartHour;
-      safeEndHour = calculatedEndHour;
-      totalHours = safeEndHour - safeStartHour;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.green[200]!, width: 1),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.access_time,
-                color: Colors.green[600],
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '時間指定予定',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green[600],
                 ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${timedSchedules.length}件',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.green[700],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          height: 200,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: totalHours * 100.0 + 80, // 時間あたり100px + 余白
-                height: 200,
-                child: Stack(
-                  children: [
-                    // 横向き時間軸
-                    _buildHorizontalTimeAxis(safeStartHour, safeEndHour),
-                    // 横向き予定バー
-                    ...timedSchedules.map((schedule) =>
-                        _buildHorizontalScheduleBar(schedule, safeStartHour)),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),
@@ -1096,102 +826,412 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  // タイムテーブル表示（旧版）
-  Widget _buildTimeTable(List<dynamic> timedSchedules) {
-    // データが空の場合はデフォルト表示
-    if (timedSchedules.isEmpty) {
-      return const Center(
-        child: Text(
-          '時間指定の予定がありません',
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 14,
-          ),
-        ),
-      );
-    }
+  // // 終日予定セクション（旧版）
+  // Widget _buildAllDaySection(List<dynamic> allDaySchedules) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Container(
+  //         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  //         decoration: BoxDecoration(
+  //           color: Colors.blue[50],
+  //           borderRadius: BorderRadius.circular(8),
+  //           border: Border.all(color: Colors.blue[200]!, width: 1),
+  //         ),
+  //         child: Row(
+  //           children: [
+  //             Icon(
+  //               Icons.event_available,
+  //               color: Colors.blue[600],
+  //               size: 18,
+  //             ),
+  //             const SizedBox(width: 8),
+  //             Text(
+  //               '終日予定',
+  //               style: TextStyle(
+  //                 fontSize: 14,
+  //                 fontWeight: FontWeight.w600,
+  //                 color: Colors.blue[600],
+  //               ),
+  //             ),
+  //             const Spacer(),
+  //             Container(
+  //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.blue[100],
+  //                 borderRadius: BorderRadius.circular(12),
+  //               ),
+  //               child: Text(
+  //                 '${allDaySchedules.length}件',
+  //                 style: TextStyle(
+  //                   fontSize: 12,
+  //                   fontWeight: FontWeight.w500,
+  //                   color: Colors.blue[700],
+  //                 ),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //       const SizedBox(height: 12),
+  //       ...allDaySchedules
+  //           .map((schedule) => _buildEnhancedAllDayItem(schedule)),
+  //     ],
+  //   );
+  // }
 
-    // 時間順にソート
-    timedSchedules.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+  // // 改善された終日予定アイテム
+  // Widget _buildEnhancedAllDayItem(dynamic schedule) {
+  //   final title = schedule.title ?? 'タイトルなし';
+  //   final memo = schedule.memo ?? '';
+  //   final color = _getScheduleColor(schedule);
 
-    // 日をまたぐ予定があるかチェック
-    final hasMultiDaySchedules = timedSchedules.any((schedule) {
-      final startDate = DateTime(
-        schedule.startDateTime.year,
-        schedule.startDateTime.month,
-        schedule.startDateTime.day,
-      );
-      final endDate = DateTime(
-        schedule.endDateTime.year,
-        schedule.endDateTime.month,
-        schedule.endDateTime.day,
-      );
-      return !startDate.isAtSameMomentAs(endDate);
-    });
+  //   return Container(
+  //     margin: const EdgeInsets.only(bottom: 10),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(12),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.grey.withOpacity(0.1),
+  //           blurRadius: 8,
+  //           offset: const Offset(0, 2),
+  //         ),
+  //       ],
+  //       border: Border.all(
+  //         color: color.withOpacity(0.2),
+  //         width: 1,
+  //       ),
+  //     ),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(16),
+  //       child: Row(
+  //         children: [
+  //           Container(
+  //             width: 6,
+  //             height: 40,
+  //             decoration: BoxDecoration(
+  //               color: color,
+  //               borderRadius: BorderRadius.circular(3),
+  //             ),
+  //           ),
+  //           const SizedBox(width: 16),
+  //           Expanded(
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Row(
+  //                   children: [
+  //                     Icon(
+  //                       Icons.event_available,
+  //                       size: 16,
+  //                       color: color,
+  //                     ),
+  //                     const SizedBox(width: 6),
+  //                     Text(
+  //                       '終日',
+  //                       style: TextStyle(
+  //                         fontSize: 12,
+  //                         fontWeight: FontWeight.w500,
+  //                         color: color,
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ),
+  //                 const SizedBox(height: 8),
+  //                 Text(
+  //                   title,
+  //                   style: const TextStyle(
+  //                     fontSize: 16,
+  //                     fontWeight: FontWeight.w600,
+  //                     color: Colors.black87,
+  //                   ),
+  //                 ),
+  //                 if (memo.isNotEmpty) ...[
+  //                   const SizedBox(height: 6),
+  //                   Text(
+  //                     memo,
+  //                     style: TextStyle(
+  //                       fontSize: 13,
+  //                       color: Colors.grey[600],
+  //                       height: 1.3,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ],
+  //             ),
+  //           ),
+  //           Container(
+  //             padding: const EdgeInsets.all(8),
+  //             decoration: BoxDecoration(
+  //               color: color.withOpacity(0.1),
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             child: Icon(
+  //               Icons.calendar_today,
+  //               size: 20,
+  //               color: color,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
-    int safeStartHour, safeEndHour, totalHours;
+  // // 改善されたタイムテーブル表示
+  // Widget _buildEnhancedTimeTable(List<dynamic> timedSchedules) {
+  //   // データが空の場合はデフォルト表示
+  //   if (timedSchedules.isEmpty) {
+  //     return const Center(
+  //       child: Text(
+  //         '時間指定の予定がありません',
+  //         style: TextStyle(
+  //           color: Colors.grey,
+  //           fontSize: 14,
+  //         ),
+  //       ),
+  //     );
+  //   }
 
-    if (hasMultiDaySchedules) {
-      // 日をまたぐ予定がある場合は24時間表示
-      safeStartHour = 0;
-      safeEndHour = 24;
-      totalHours = 24;
-    } else {
-      // 通常の予定の場合
-      final startHour = timedSchedules.first.startDateTime.hour;
-      final endHour = timedSchedules.last.endDateTime.hour + 1;
+  //   // 時間順にソート
+  //   timedSchedules.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 
-      // 最小6時間、最大24時間の範囲を確保
-      final minStartHour = (startHour - 1).clamp(0, 23);
-      final maxEndHour = (endHour + 1).clamp(6, 24);
-      safeStartHour = minStartHour;
-      safeEndHour = maxEndHour;
-      totalHours = safeEndHour - safeStartHour;
-    }
+  //   // 日をまたぐ予定があるかチェック
+  //   final hasMultiDaySchedules = timedSchedules.any((schedule) {
+  //     final startDate = DateTime(
+  //       schedule.startDateTime.year,
+  //       schedule.startDateTime.month,
+  //       schedule.startDateTime.day,
+  //     );
+  //     final endDate = DateTime(
+  //       schedule.endDateTime.year,
+  //       schedule.endDateTime.month,
+  //       schedule.endDateTime.day,
+  //     );
+  //     return !startDate.isAtSameMomentAs(endDate);
+  //   });
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.access_time,
-              color: Colors.green[600],
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '時間指定',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.green[600],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 200,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: totalHours * 80.0 + 60, // 時間あたり80px + 余白
-              child: Stack(
-                children: [
-                  // 時間軸
-                  _buildTimeAxis(safeStartHour, safeEndHour),
-                  // 予定バー
-                  ...timedSchedules.map(
-                      (schedule) => _buildScheduleBar(schedule, safeStartHour)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  //   int safeStartHour, safeEndHour, totalHours;
+
+  //   if (hasMultiDaySchedules) {
+  //     // 日をまたぐ予定がある場合は24時間表示
+  //     safeStartHour = 0;
+  //     safeEndHour = 24;
+  //     totalHours = 24;
+  //   } else {
+  //     // 通常の予定の場合
+  //     final today = DateTime.now();
+  //     final todayStartOfDay =
+  //         DateTime(today.year, today.month, today.day, 0, 0, 0);
+  //     final todayEndOfDay =
+  //         DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+  //     int minHour = 24;
+  //     int maxHour = 0;
+
+  //     for (final schedule in timedSchedules) {
+  //       // 今日の範囲内での有効な時間を計算
+  //       int scheduleStartHour = schedule.startDateTime.isBefore(todayStartOfDay)
+  //           ? 0
+  //           : schedule.startDateTime.hour;
+  //       int scheduleEndHour = schedule.endDateTime.isAfter(todayEndOfDay)
+  //           ? 24
+  //           : schedule.endDateTime.hour +
+  //               (schedule.endDateTime.minute > 0 ? 1 : 0);
+
+  //       minHour = min(minHour, scheduleStartHour);
+  //       maxHour = max(maxHour, scheduleEndHour);
+  //     }
+
+  //     // 最小6時間、最大24時間の範囲を確保
+  //     final calculatedStartHour = (minHour - 1).clamp(0, 23);
+  //     final calculatedEndHour = (maxHour + 1).clamp(6, 24);
+
+  //     safeStartHour = calculatedStartHour;
+  //     safeEndHour = calculatedEndHour;
+  //     totalHours = safeEndHour - safeStartHour;
+  //   }
+
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Container(
+  //         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  //         decoration: BoxDecoration(
+  //           color: Colors.green[50],
+  //           borderRadius: BorderRadius.circular(8),
+  //           border: Border.all(color: Colors.green[200]!, width: 1),
+  //         ),
+  //         child: Row(
+  //           children: [
+  //             Icon(
+  //               Icons.access_time,
+  //               color: Colors.green[600],
+  //               size: 18,
+  //             ),
+  //             const SizedBox(width: 8),
+  //             Text(
+  //               '時間指定予定',
+  //               style: TextStyle(
+  //                 fontSize: 14,
+  //                 fontWeight: FontWeight.w600,
+  //                 color: Colors.green[600],
+  //               ),
+  //             ),
+  //             const Spacer(),
+  //             Container(
+  //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.green[100],
+  //                 borderRadius: BorderRadius.circular(12),
+  //               ),
+  //               child: Text(
+  //                 '${timedSchedules.length}件',
+  //                 style: TextStyle(
+  //                   fontSize: 12,
+  //                   fontWeight: FontWeight.w500,
+  //                   color: Colors.green[700],
+  //                 ),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //       const SizedBox(height: 12),
+  //       Container(
+  //         height: 200,
+  //         decoration: BoxDecoration(
+  //           color: Colors.white,
+  //           borderRadius: BorderRadius.circular(12),
+  //           boxShadow: [
+  //             BoxShadow(
+  //               color: Colors.grey.withOpacity(0.1),
+  //               blurRadius: 8,
+  //               offset: const Offset(0, 2),
+  //             ),
+  //           ],
+  //         ),
+  //         child: ClipRRect(
+  //           borderRadius: BorderRadius.circular(12),
+  //           child: SingleChildScrollView(
+  //             scrollDirection: Axis.horizontal,
+  //             child: SizedBox(
+  //               width: totalHours * 100.0 + 80, // 時間あたり100px + 余白
+  //               height: 200,
+  //               child: Stack(
+  //                 children: [
+  //                   // 横向き時間軸
+  //                   _buildHorizontalTimeAxis(safeStartHour, safeEndHour),
+  //                   // 横向き予定バー
+  //                   ...timedSchedules.map((schedule) =>
+  //                       _buildHorizontalScheduleBar(schedule, safeStartHour)),
+  //                 ],
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+
+  // // タイムテーブル表示（旧版）
+  // Widget _buildTimeTable(List<dynamic> timedSchedules) {
+  //   // データが空の場合はデフォルト表示
+  //   if (timedSchedules.isEmpty) {
+  //     return const Center(
+  //       child: Text(
+  //         '時間指定の予定がありません',
+  //         style: TextStyle(
+  //           color: Colors.grey,
+  //           fontSize: 14,
+  //         ),
+  //       ),
+  //     );
+  //   }
+
+  //   // 時間順にソート
+  //   timedSchedules.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+
+  //   // 日をまたぐ予定があるかチェック
+  //   final hasMultiDaySchedules = timedSchedules.any((schedule) {
+  //     final startDate = DateTime(
+  //       schedule.startDateTime.year,
+  //       schedule.startDateTime.month,
+  //       schedule.startDateTime.day,
+  //     );
+  //     final endDate = DateTime(
+  //       schedule.endDateTime.year,
+  //       schedule.endDateTime.month,
+  //       schedule.endDateTime.day,
+  //     );
+  //     return !startDate.isAtSameMomentAs(endDate);
+  //   });
+
+  //   int safeStartHour, safeEndHour, totalHours;
+
+  //   if (hasMultiDaySchedules) {
+  //     // 日をまたぐ予定がある場合は24時間表示
+  //     safeStartHour = 0;
+  //     safeEndHour = 24;
+  //     totalHours = 24;
+  //   } else {
+  //     // 通常の予定の場合
+  //     final startHour = timedSchedules.first.startDateTime.hour;
+  //     final endHour = timedSchedules.last.endDateTime.hour + 1;
+
+  //     // 最小6時間、最大24時間の範囲を確保
+  //     final minStartHour = (startHour - 1).clamp(0, 23);
+  //     final maxEndHour = (endHour + 1).clamp(6, 24);
+  //     safeStartHour = minStartHour;
+  //     safeEndHour = maxEndHour;
+  //     totalHours = safeEndHour - safeStartHour;
+  //   }
+
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Row(
+  //         children: [
+  //           Icon(
+  //             Icons.access_time,
+  //             color: Colors.green[600],
+  //             size: 16,
+  //           ),
+  //           const SizedBox(width: 4),
+  //           Text(
+  //             '時間指定',
+  //             style: TextStyle(
+  //               fontSize: 12,
+  //               fontWeight: FontWeight.w600,
+  //               color: Colors.green[600],
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       const SizedBox(height: 8),
+  //       SizedBox(
+  //         height: 200,
+  //         child: SingleChildScrollView(
+  //           scrollDirection: Axis.horizontal,
+  //           child: SizedBox(
+  //             width: totalHours * 80.0 + 60, // 時間あたり80px + 余白
+  //             child: Stack(
+  //               children: [
+  //                 // 時間軸
+  //                 _buildTimeAxis(safeStartHour, safeEndHour),
+  //                 // 予定バー
+  //                 ...timedSchedules.map(
+  //                     (schedule) => _buildScheduleBar(schedule, safeStartHour)),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   // 横向き時間軸を構築
   Widget _buildHorizontalTimeAxis(int startHour, int endHour) {
@@ -1305,7 +1345,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  // 終日予定バーを構築
+  // 終日予定バーを構築（改善版）
   Widget _buildAllDayBar(dynamic schedule, int index, int totalHours) {
     final title = schedule.title ?? 'タイトルなし';
     final color = _getScheduleColor(schedule);
@@ -1315,40 +1355,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Positioned(
       left: 0,
-      top: 50.0 + (index * 40), // 時間軸の下に配置、複数の場合は縦に並べる
+      top: 50.0 + (index * 45), // 間隔を少し広げる
       child: Container(
         width: timelineWidth, // タイムテーブルの実際の幅に合わせる
-        height: 35,
+        height: 38, // 高さを少し増やす
+        margin: const EdgeInsets.symmetric(vertical: 2), // 上下にマージンを追加
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              color.withOpacity(0.8),
-              color.withOpacity(0.6),
+              color.withOpacity(0.9),
+              color.withOpacity(0.7),
             ],
           ),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8), // 角丸を少し大きく
           border: Border.all(
-            color: color.withOpacity(0.7),
-            width: 1,
+            color: color.withOpacity(0.8),
+            width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
+              color: color.withOpacity(0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13, // フォントサイズを少し大きく
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
@@ -1530,10 +1571,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Positioned(
       left: left,
-      top: top + 50 + (laneIndex * 35), // 終日予定の下に配置、レーンごとに縦に並べる
+      top: top + 50 + (laneIndex * 45), // レーンの間隔を広げる
       child: Container(
-        width: width.clamp(60.0, 200.0),
-        height: 35,
+        width: width.clamp(80.0, 250.0), // 最小幅を少し大きく
+        height: 38, // 高さを少し増やす
+        margin: const EdgeInsets.symmetric(vertical: 2), // 上下にマージンを追加
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -1546,7 +1588,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: color.withOpacity(0.8),
-            width: 1,
+            width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
@@ -1557,13 +1599,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13, // フォントサイズを少し大きく
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),

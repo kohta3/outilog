@@ -20,9 +20,10 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
 
   ScheduleFirestoreNotifier(this._repo, this._spaceId, this._userId)
       : super([]) {
-    if (_spaceId != null) {
-      _loadSchedules();
-    }
+    // 初期化は外部から明示的に呼び出すように変更
+    // if (_spaceId != null) {
+    //   _loadSchedules();
+    // }
   }
 
   /// スケジュール一覧を読み込み
@@ -213,7 +214,12 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
 
   /// スケジュール一覧を手動で再読み込み
   Future<void> reloadSchedules() async {
-    await _loadSchedules();
+    // 現在のスペースIDとユーザーIDを再取得
+    if (_spaceId != null && _userId != null) {
+      await _loadSchedules();
+    } else {
+      print('DEBUG: Cannot reload schedules - missing spaceId or userId');
+    }
   }
 
   /// 特定の日のスケジュールを取得（複数日にまたがる予定も含む）

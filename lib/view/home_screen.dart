@@ -7,6 +7,8 @@ import 'package:outi_log/provider/event_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/transaction_provider.dart';
+import 'package:outi_log/provider/schedule_firestore_provider.dart';
+import 'package:outi_log/provider/category_provider.dart';
 import 'package:outi_log/view/component/app_drawer.dart';
 import 'package:outi_log/view/dashboard_screen.dart';
 import 'package:outi_log/view/household_budget.dart';
@@ -47,6 +49,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       // 従来のローカルスペースも並行して初期化（移行中のため）
       await ref.read(spacesProvider.notifier).initializeSpaces(currentUser.uid);
+
+      // スケジュールの初期化を追加
+      await _initializeSchedules();
+
+      // カテゴリの初期化を追加
+      await _initializeCategories();
+    }
+  }
+
+  /// スケジュールの初期化処理
+  Future<void> _initializeSchedules() async {
+    try {
+      // スペースが利用可能になるまで少し待機
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+      final currentUser = ref.read(currentUserProvider);
+
+      if (currentSpace != null && currentUser != null) {
+        print('DEBUG: Initializing schedules for home screen');
+        await ref.read(scheduleFirestoreProvider.notifier).reloadSchedules();
+      }
+    } catch (e) {
+      print('DEBUG: Error initializing schedules in home screen: $e');
+    }
+  }
+
+  /// カテゴリの初期化処理
+  Future<void> _initializeCategories() async {
+    try {
+      // スペースが利用可能になるまで少し待機
+      await Future.delayed(const Duration(milliseconds: 700));
+
+      final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+
+      if (currentSpace != null) {
+        print('DEBUG: Initializing categories for home screen');
+        await ref.read(categoryProvider.notifier).loadCategories();
+      }
+    } catch (e) {
+      print('DEBUG: Error initializing categories in home screen: $e');
     }
   }
 

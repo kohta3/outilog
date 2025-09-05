@@ -35,6 +35,11 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadTransactionData();
+
+    // カテゴリの初期化を追加
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeCategories();
+    });
   }
 
   Future<void> _loadTransactionData() async {
@@ -107,6 +112,26 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
         _isLoading = false;
       });
       Toast.show(context, 'データの読み込みに失敗しました: $e');
+    }
+  }
+
+  /// カテゴリの初期化処理
+  Future<void> _initializeCategories() async {
+    try {
+      // スペースが利用可能になるまで少し待機
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+
+      if (currentSpace != null) {
+        print('DEBUG: Initializing categories for household budget');
+        await ref.read(categoryProvider.notifier).loadCategories();
+
+        // カテゴリ読み込み後に取引データを再読み込み
+        await _loadTransactionData();
+      }
+    } catch (e) {
+      print('DEBUG: Error initializing categories: $e');
     }
   }
 

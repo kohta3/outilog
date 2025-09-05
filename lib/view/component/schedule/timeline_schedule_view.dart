@@ -187,56 +187,96 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey[300]!,
+          width: 1,
+        ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 時間軸
-              _buildTimeAxis(startHour, endHour),
-              SizedBox(width: 20),
-              // スケジュールバー
-              Expanded(
-                child: _buildScheduleBars(schedules, startHour, endHour),
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          children: [
+            // 終日予定セクション（Googleカレンダー風）
+            if (hasAllDaySchedules)
+              _buildAllDaySection(schedules.where((s) => s.isAllDay).toList()),
+            // メインタイムライン
+            Expanded(
+              child: SingleChildScrollView(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 時間軸（Googleカレンダー風）
+                    _buildGoogleStyleTimeAxis(startHour, endHour),
+                    // スケジュールエリア
+                    Expanded(
+                      child: _buildGoogleStyleScheduleArea(
+                          schedules, startHour, endHour),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTimeAxis(int startHour, int endHour) {
+  // Googleカレンダー風の終日予定セクション
+  Widget _buildAllDaySection(List<ScheduleModel> allDaySchedules) {
     return Container(
-      width: 70,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.grey[50]!,
-            Colors.grey[100]!,
-          ],
+        color: Colors.grey[50],
+        border: Border(
+          bottom: BorderSide(color: Colors.grey[300]!, width: 1),
         ),
-        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            child: Text(
+              '終日',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: allDaySchedules.map((schedule) {
+                return _buildGoogleStyleEventChip(schedule, true);
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Googleカレンダー風の時間軸
+  Widget _buildGoogleStyleTimeAxis(int startHour, int endHour) {
+    return Container(
+      width: 50,
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        border: Border(
+          right: BorderSide(color: Colors.grey[300]!, width: 1),
+        ),
       ),
       child: Column(
         children: [
           for (int hour = startHour; hour <= endHour; hour++)
             Container(
-              height: 70,
-              width: 70,
+              height: 60,
+              width: 50,
               alignment: Alignment.topCenter,
               decoration: BoxDecoration(
                 border: hour == startHour
@@ -250,22 +290,12 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
               ),
               child: Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: hour % 6 == 0
-                        ? themeColor.withOpacity(0.1)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${hour.toString().padLeft(2, '0')}:00',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: hour % 6 == 0 ? themeColor : Colors.grey[700],
-                      fontWeight:
-                          hour % 6 == 0 ? FontWeight.bold : FontWeight.w500,
-                    ),
+                child: Text(
+                  '${hour.toString().padLeft(2, '0')}:00',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ),
@@ -275,80 +305,55 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
     );
   }
 
-  Widget _buildScheduleBars(
+  // Googleカレンダー風のスケジュールエリア
+  Widget _buildGoogleStyleScheduleArea(
       List<ScheduleModel> schedules, int startHour, int endHour) {
     final totalHours = endHour - startHour + 1;
-    const hourHeight = 70.0;
+    const hourHeight = 60.0;
+    final timedSchedules = schedules.where((s) => !s.isAllDay).toList();
 
-    return SizedBox(
+    return Container(
       height: totalHours * hourHeight,
       child: Stack(
         children: [
-          // 背景グリッド
+          // 時間グリッド（Googleカレンダー風）
           ...List.generate(totalHours + 1, (index) {
-            final isMainHour = (startHour + index) % 6 == 0;
             return Positioned(
               top: index * hourHeight,
               left: 0,
               right: 0,
               child: Container(
-                height: isMainHour ? 2 : 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isMainHour
-                        ? [
-                            themeColor.withOpacity(0.3),
-                            themeColor.withOpacity(0.1)
-                          ]
-                        : [Colors.grey[200]!, Colors.grey[100]!],
-                  ),
-                ),
+                height: 1,
+                color: Colors.grey[200]!,
               ),
             );
           }),
-          // スケジュールバー
-          ...schedules.asMap().entries.map((entry) {
+          // 予定の配置
+          ...timedSchedules.asMap().entries.map((entry) {
             final index = entry.key;
             final schedule = entry.value;
-            return AnimatedContainer(
-              duration: Duration(milliseconds: 300 + (index * 50)),
-              curve: Curves.easeOutBack,
-              child: _buildScheduleBar(schedule, startHour, hourHeight, index),
-            );
+            return _buildGoogleStyleEvent(
+                schedule, startHour, hourHeight, index);
           }).toList(),
         ],
       ),
     );
   }
 
-  Widget _buildScheduleBar(
+  // Googleカレンダー風の予定表示
+  Widget _buildGoogleStyleEvent(
       ScheduleModel schedule, int startHour, double hourHeight, int index) {
-    // 開始時間と終了時間の計算
-    int startMinutes;
-    int endMinutes;
-
-    if (schedule.isAllDay) {
-      // 終日予定は0時から24時まで（または表示範囲の最初から最後まで）
-      startMinutes = (0 - startHour) * 60;
-      endMinutes = (24 - startHour) * 60;
-    } else {
-      // 時間指定予定
-      startMinutes = (schedule.startDateTime.hour - startHour) * 60 +
-          schedule.startDateTime.minute;
-      endMinutes = (schedule.endDateTime.hour - startHour) * 60 +
-          schedule.endDateTime.minute;
-    }
+    final startMinutes = (schedule.startDateTime.hour - startHour) * 60 +
+        schedule.startDateTime.minute;
+    final endMinutes = (schedule.endDateTime.hour - startHour) * 60 +
+        schedule.endDateTime.minute;
 
     final top = (startMinutes / 60) * hourHeight;
-    var height = ((endMinutes - startMinutes) / 60) * hourHeight;
+    final height = ((endMinutes - startMinutes) / 60) * hourHeight;
 
-    // 最小高さを50に設定（タップしやすさを考慮）
-    height = height < 50 ? 50 : height;
-
-    // 複数のスケジュールが重複する場合の横位置調整
-    final leftOffset = (index % 4) * 12.0; // 最大4つまで横にずらす
-    final maxWidth = 150.0;
-    final width = maxWidth - leftOffset;
+    // 重複時の横位置調整
+    final leftOffset = (index % 3) * 2.0; // 最大3つまで横にずらす
+    final width = 200.0 - leftOffset;
 
     return Positioned(
       top: top,
@@ -359,129 +364,39 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
         },
         child: Container(
           width: width,
-          height: height,
+          height: height.clamp(20.0, double.infinity),
+          margin: EdgeInsets.symmetric(horizontal: 2, vertical: 1),
           decoration: BoxDecoration(
-            gradient: schedule.isAllDay
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      _getScheduleColor(schedule).withOpacity(0.9),
-                      _getScheduleColor(schedule).withOpacity(0.6),
-                    ],
-                  )
-                : LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      _getScheduleColor(schedule),
-                      _getScheduleColor(schedule).withOpacity(0.8),
-                    ],
-                  ),
-            borderRadius: BorderRadius.circular(16),
+            color: _getScheduleColor(schedule),
+            borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: schedule.isAllDay
-                  ? _getScheduleColor(schedule).withOpacity(0.3)
-                  : _getScheduleColor(schedule).withOpacity(0.2),
-              width: 2,
+              color: _getScheduleColor(schedule).withOpacity(0.3),
+              width: 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: _getScheduleColor(schedule).withOpacity(0.4),
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.5),
-                blurRadius: 6,
-                offset: Offset(-2, -2),
-              ),
-            ],
           ),
           child: Padding(
-            padding: EdgeInsets.all(12),
+            padding: EdgeInsets.all(4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    if (schedule.isAllDay) ...[
-                      Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          Icons.event_available,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                    ],
-                    Expanded(
-                      child: Text(
-                        schedule.title,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.3),
-                              offset: Offset(1, 1),
-                              blurRadius: 2,
-                            ),
-                          ],
-                        ),
-                        maxLines: height > 70 ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                if (height > 60) ...[
-                  SizedBox(height: 6),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      schedule.isAllDay
-                          ? '終日'
-                          : '${DateFormat('HH:mm').format(schedule.startDateTime)} - ${DateFormat('HH:mm').format(schedule.endDateTime)}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                Text(
+                  schedule.title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-                if (schedule.memo != null &&
-                    schedule.memo!.isNotEmpty &&
-                    height > 90) ...[
-                  SizedBox(height: 6),
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        schedule.memo!,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 10,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (height > 30) ...[
+                  SizedBox(height: 2),
+                  Text(
+                    '${DateFormat('HH:mm').format(schedule.startDateTime)} - ${DateFormat('HH:mm').format(schedule.endDateTime)}',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 9,
                     ),
                   ),
                 ],
@@ -493,20 +408,58 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
     );
   }
 
+  // Googleカレンダー風のイベントチップ（終日予定用）
+  Widget _buildGoogleStyleEventChip(ScheduleModel schedule, bool isAllDay) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getScheduleColor(schedule),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: _getScheduleColor(schedule).withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isAllDay) ...[
+            Icon(
+              Icons.event_available,
+              size: 12,
+              color: Colors.white,
+            ),
+            SizedBox(width: 4),
+          ],
+          Text(
+            schedule.title,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getScheduleColor(ScheduleModel schedule) {
     if (schedule.color != null && schedule.color!.isNotEmpty) {
       return _hexToColor(schedule.color!);
     }
-    // 色が設定されていない場合はタイトルのハッシュから色を生成
+    // Googleカレンダー風の色パレット
     final colors = [
-      Color(0xFF375E97), // ダークブルー
-      Color(0xFFFB6542), // オレンジレッド
-      Color(0xFF3F681C), // ダークグリーン
-      Color(0xFF6FB98F), // ミントグリーン
-      Color(0xFFF18D9E), // ピンク
-      Color(0xFF4CB5F5), // ライトブルー
-      Color(0xFFF4CC70), // イエロー
-      Color(0xFF8D230F), // ダークレッド
+      Color(0xFF4285F4), // Google Blue
+      Color(0xFF34A853), // Google Green
+      Color(0xFFEA4335), // Google Red
+      Color(0xFFFBBC04), // Google Yellow
+      Color(0xFF9C27B0), // Purple
+      Color(0xFF00BCD4), // Cyan
+      Color(0xFFFF9800), // Orange
+      Color(0xFF795548), // Brown
+      Color(0xFF607D8B), // Blue Grey
+      Color(0xFFE91E63), // Pink
     ];
     final index = schedule.title.hashCode.abs() % colors.length;
     return colors[index];

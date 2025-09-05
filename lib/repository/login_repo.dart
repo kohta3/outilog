@@ -23,8 +23,8 @@ class LoginRepo {
   }
 
   Future<void> logout() async {
-    await _secureStorageController.deleteValue(key: 'isFirstLogin');
-    await _secureStorageController.clearUserCache();
+    // セキュアストレージの全データを削除
+    await _secureStorageController.deleteAllValue();
   }
 
   // ユーザー情報のキャッシュ機能

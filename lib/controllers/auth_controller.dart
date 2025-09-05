@@ -109,6 +109,12 @@ class AuthController {
         Toast.show(context, 'ログインに成功しました');
         await _loginRepo.setIsFirstLogin();
 
+        // ユーザー情報をキャッシュに保存
+        final currentUser = await getCurrentUser();
+        if (currentUser != null) {
+          await _loginRepo.cacheUserData(currentUser);
+        }
+
         // ホームタブにリダイレクトするためにインデックスをリセット
         if (ref != null) {
           ref.read(homeScreenIndexProvider.notifier).state = 0;
@@ -156,6 +162,12 @@ class AuthController {
         Toast.show(context, 'メール認証が完了しました');
         await _loginRepo.setIsFirstLogin();
 
+        // ユーザー情報をキャッシュに保存（ログイン時と同じ処理）
+        final currentUser = await getCurrentUser();
+        if (currentUser != null) {
+          await _loginRepo.cacheUserData(currentUser);
+        }
+
         // ホームタブにリダイレクトするためにインデックスをリセット
         if (ref != null) {
           ref.read(homeScreenIndexProvider.notifier).state = 0;
@@ -182,7 +194,11 @@ class AuthController {
   /// ログアウト
   Future<void> signOut({BuildContext? context}) async {
     try {
+      // Firebase認証からログアウト
       await _authInfrastructure.signOut();
+
+      // セキュアストレージの全データを削除
+      await _loginRepo.logout();
 
       if (context != null && context.mounted) {
         // ログイン画面に遷移
