@@ -5,11 +5,11 @@ import 'package:outi_log/models/space_model.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/auth_provider.dart';
-import 'package:outi_log/provider/user_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:outi_log/infrastructure/storage_infrastructure.dart';
+import 'package:outi_log/infrastructure/space_infrastructure.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -32,6 +32,8 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
   String? _inviteCode;
   bool _isLoadingInviteCode = false;
   File? _selectedHeaderImage;
+  List<Map<String, dynamic>> _participants = [];
+  bool _isLoadingParticipants = false;
   bool _isUploadingHeaderImage = false;
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -40,6 +42,7 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
     super.initState();
     _spaceNameController = TextEditingController(text: widget.space.spaceName);
     _loadInviteCode();
+    _loadParticipants();
   }
 
   @override
@@ -523,82 +526,109 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
 
   /// 参加者セクションを構築
   Widget _buildParticipantsSection() {
-    return FutureBuilder(
-      future: _loadParticipants(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
+    if (_isLoadingParticipants) {
+      return const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-        final participants = snapshot.data ?? [];
-
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
-            child: participants.isEmpty
-                ? const Center(
-                    child: Text(
-                      '参加者がいません',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
-                    ),
-                  )
-                : Wrap(
-                    spacing: 16.0,
-                    runSpacing: 16.0,
-                    alignment: WrapAlignment.start,
-                    children: participants.map((participant) {
-                      return _buildParticipantChip(participant);
-                    }).toList(),
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        child: _participants.isEmpty
+            ? const Center(
+                child: Text(
+                  '参加者がいません',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
                   ),
-          ),
-        );
-      },
+                ),
+              )
+            : Wrap(
+                spacing: 16.0,
+                runSpacing: 16.0,
+                alignment: WrapAlignment.start,
+                children: _participants.map((participant) {
+                  return _buildParticipantChip(participant);
+                }).toList(),
+              ),
+      ),
     );
   }
 
   /// 参加者データを読み込み
-  Future<List<Map<String, dynamic>>> _loadParticipants() async {
+  Future<void> _loadParticipants() async {
+    if (_isLoadingParticipants) return;
+
+    setState(() {
+      _isLoadingParticipants = true;
+    });
+
     try {
-      // 現在のユーザー情報を参加者として表示
-      final currentUserModel = await ref.read(cachedUserModelProvider.future);
-      if (currentUserModel != null) {
-        return [
-          {
-            'user_name': currentUserModel.username,
-            'user_email': currentUserModel.email,
-            'role': 'owner', // 現在のユーザーをオーナーとして表示
-            'profile_image_url': currentUserModel.profileImageUrl,
-            'user_id': currentUserModel.id,
-          }
-        ];
+      final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+      if (currentSpace == null) {
+        print('DEBUG: No current space found');
+        setState(() {
+          _participants = [];
+          _isLoadingParticipants = false;
+        });
+        return;
       }
-      return [];
+
+      // スペース参加者を取得
+      final spaceInfrastructure = SpaceInfrastructure();
+      final spaceDetails =
+          await spaceInfrastructure.getSpaceDetails(currentSpace.id);
+      final participants = spaceDetails?['participants'] ?? [];
+
+      print(
+          'DEBUG: Loaded ${participants.length} participants for space ${currentSpace.id}');
+      for (final participant in participants) {
+        print(
+            'DEBUG: - ${participant['user_name']} (${participant['user_id']}) - ${participant['role']}');
+      }
+
+      setState(() {
+        _participants = participants;
+        _isLoadingParticipants = false;
+      });
     } catch (e) {
       print('Warning: Could not load participants: $e');
-      return [];
+      setState(() {
+        _participants = [];
+        _isLoadingParticipants = false;
+      });
     }
   }
 
   /// 参加者チップを構築
   Widget _buildParticipantChip(Map<String, dynamic> participant) {
-    final userName = participant['user_name'] as String? ?? '不明';
+    final userName = participant['user_name'] as String? ??
+        participant['user_email'] as String? ??
+        '不明';
     final role = participant['role'] as String? ?? 'member';
     final profileImageUrl = participant['profile_image_url'] as String?;
     final userId = participant['user_id'] as String?;
     final isOwner = role == 'owner';
+
+    // 現在のユーザーがオーナーかどうかを判定
+    final currentUser = ref.read(currentUserProvider);
+    final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+    bool isCurrentUserOwner = false;
+
+    if (currentUser != null && currentSpace != null) {
+      // 現在のユーザーがオーナーかどうかを判定（ownerIdと比較）
+      isCurrentUserOwner = currentSpace.ownerId == currentUser.uid;
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -661,14 +691,16 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
                   ),
                 ),
               ),
-            // 削除ボタン（オーナー以外の場合のみ）
-            if (!isOwner && userId != null)
+            // 削除ボタン（現在のユーザーがオーナーで、削除対象がオーナー以外の場合のみ）
+            if (isCurrentUserOwner && !isOwner && userId != null)
               Positioned(
                 top: -5,
                 right: -5,
                 child: GestureDetector(
-                  onTap: () =>
-                      _showRemoveMemberDialog(context, userName, userId),
+                  onTap: () {
+                    print('DEBUG: Remove button tapped for user: $userId');
+                    _showRemoveMemberDialog(context, userName, userId);
+                  },
                   child: Container(
                     width: 20,
                     height: 20,
@@ -739,15 +771,47 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
   Future<void> _removeMember(
       BuildContext context, String userId, String userName) async {
     try {
-      // TODO: 実際のメンバー削除処理を実装
-      await Future.delayed(const Duration(seconds: 1)); // 仮の実装
+      print('DEBUG: Starting member removal for user: $userId');
 
-      if (context.mounted) {
-        Toast.show(context, '$userName をスペースから削除しました');
-        // 参加者リストを更新
-        setState(() {});
+      final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+      final currentUser = ref.read(currentUserProvider);
+
+      if (currentSpace == null || currentUser == null) {
+        print('DEBUG: Missing space or user info');
+        Toast.show(context, 'スペース情報またはユーザー情報が取得できません');
+        return;
+      }
+
+      print('DEBUG: Removing participant from space: ${currentSpace.id}');
+
+      // スペース参加者を削除
+      final spaceInfrastructure = SpaceInfrastructure();
+      final success = await spaceInfrastructure.removeParticipant(
+        spaceId: currentSpace.id,
+        userId: userId,
+        requesterId: currentUser.uid,
+      );
+
+      print('DEBUG: Remove participant result: $success');
+
+      if (success) {
+        if (context.mounted) {
+          Toast.show(context, '$userName をスペースから削除しました');
+          // 参加者リストを更新
+          print('DEBUG: Refreshing participant list');
+          await _loadParticipants();
+
+          // プロバイダーも更新
+          final spacesProvider = ref.read(firestoreSpacesProvider.notifier);
+          await spacesProvider.reloadSpaces();
+        }
+      } else {
+        if (context.mounted) {
+          Toast.show(context, 'メンバーの削除に失敗しました');
+        }
       }
     } catch (e) {
+      print('DEBUG: Error removing member: $e');
       if (context.mounted) {
         Toast.show(context, 'メンバーの削除に失敗しました: $e');
       }

@@ -168,6 +168,7 @@ class FirestoreSpacesNotifier extends StateNotifier<SpacesModel?> {
 
       if (success) {
         // 状態を更新
+        print('DEBUG: Space joined via provider, refreshing spaces');
         await initializeSpaces();
       }
 

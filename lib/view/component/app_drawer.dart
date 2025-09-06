@@ -7,13 +7,6 @@ import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/view/space_add_screen.dart';
 import 'package:outi_log/view/settings_screen.dart';
 import 'package:outi_log/provider/auth_provider.dart';
-import 'package:outi_log/controllers/auth_controller.dart';
-import 'package:outi_log/infrastructure/auth_indrastructure.dart';
-import 'package:outi_log/infrastructure/user_firestore_infrastructure.dart';
-import 'package:outi_log/infrastructure/storage_infrastructure.dart';
-import 'package:outi_log/provider/flutter_secure_storage_provider.dart';
-import 'package:outi_log/repository/login_repo.dart';
-import 'package:outi_log/infrastructure/invite_infrastructure.dart';
 import 'package:outi_log/view/space_settings_screen.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -216,13 +209,6 @@ class AppDrawer extends ConsumerWidget {
               );
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('ログアウト'),
-            onTap: () async {
-              await _performLogout(context, ref);
-            },
-          ),
         ],
       ),
     );
@@ -278,28 +264,15 @@ class AppDrawer extends ConsumerWidget {
       }
 
       // 招待コードでスペースに参加
-      final inviteInfrastructure = InviteInfrastructure();
-      final success = await inviteInfrastructure.joinSpaceWithInviteCode(
-        inviteCode: inviteCode,
-        userId: currentUser.uid,
-        userName: currentUser.displayName ?? 'ユーザー',
-        userEmail: currentUser.email ?? '',
-      );
+      final success = await ref
+          .read(firestoreSpacesProvider.notifier)
+          .joinSpaceWithInviteCode(
+            inviteCode: inviteCode,
+            userName: currentUser.displayName ?? 'ユーザー',
+            userEmail: currentUser.email ?? '',
+          );
 
       if (success) {
-        // スペース一覧を更新
-        final firestoreSpaces = ref.read(firestoreSpacesProvider);
-        if (firestoreSpaces != null) {
-          await ref.read(firestoreSpacesProvider.notifier).initializeSpaces();
-        } else {
-          final currentUser = ref.read(currentUserProvider);
-          if (currentUser != null) {
-            await ref
-                .read(spacesProvider.notifier)
-                .initializeSpaces(currentUser.uid);
-          }
-        }
-
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -396,25 +369,6 @@ class AppDrawer extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _performLogout(BuildContext context, WidgetRef ref) async {
-    try {
-      final authController = AuthController(
-        AuthInfrastructure(),
-        LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
-        UserFirestoreInfrastructure(),
-        StorageInfrastructure(),
-      );
-
-      if (context.mounted) {
-        Navigator.pop(context); // ドロワーを閉じる
-      }
-
-      await authController.signOut(context: context);
-    } catch (e) {
-      // エラーハンドリングはAuthController内で行われる
-    }
   }
 
   /// スペース設定画面に遷移

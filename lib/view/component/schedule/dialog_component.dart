@@ -4,6 +4,9 @@ import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/models/schedule_model.dart';
 import 'package:outi_log/provider/schedule_firestore_provider.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
+import 'package:outi_log/provider/notification_service_provider.dart';
+import 'package:outi_log/provider/auth_provider.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:outi_log/infrastructure/space_infrastructure.dart';
 import 'package:outi_log/utils/format.dart';
 import 'package:outi_log/utils/schedule_util.dart' as schedule_util;
@@ -113,6 +116,70 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
         // デバッグ用：今日の日付をログ出力
         print('DEBUG: No date selected, using today: $today');
       }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // 新規作成時で、まだ参加メンバーが設定されていない場合
+    if (widget.initialSchedule == null && participationList.isEmpty) {
+      // 現在のユーザーを自動的に参加メンバーに追加
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser != null) {
+        setState(() {
+          participationList[currentUser.uid] = true;
+        });
+        print(
+            'DEBUG: Auto-added current user to participation list: ${currentUser.uid}');
+      }
+    }
+
+    // 参加者のユーザー名を修正（「ユーザー」になっている場合）
+    _fixParticipantUserNames();
+  }
+
+  /// 参加者のユーザー名を修正
+  Future<void> _fixParticipantUserNames() async {
+    try {
+      final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
+      final currentUser = ref.read(currentUserProvider);
+
+      if (currentSpace == null || currentUser == null) return;
+
+      // スペース参加者を取得
+      final spaceInfrastructure = SpaceInfrastructure();
+      final spaceDetails =
+          await spaceInfrastructure.getSpaceDetails(currentSpace.id);
+      final participants = spaceDetails?['participants'] ?? [];
+
+      // 「ユーザー」になっている参加者を修正
+      for (final participant in participants) {
+        final userId = participant['user_id'] as String;
+        final userName = participant['user_name'] as String;
+
+        if (userName == 'ユーザー') {
+          // 現在のユーザーの場合、正しいユーザー名に更新
+          if (userId == currentUser.uid) {
+            final correctUserName = currentUser.displayName ??
+                currentUser.email?.split('@').first ??
+                'ユーザー';
+
+            if (correctUserName != 'ユーザー') {
+              await spaceInfrastructure.updateParticipantUserName(
+                spaceId: currentSpace.id,
+                userId: userId,
+                newUserName: correctUserName,
+              );
+              print(
+                  'DEBUG: Fixed user_name for current user: $correctUserName');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('DEBUG: Error fixing participant user names: $e');
     }
   }
 
@@ -347,6 +414,9 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
 
                         return participantsAsync.when(
                           data: (participants) {
+                            // デバッグ用：参加者データをログ出力
+                            print('DEBUG: Participants data: $participants');
+
                             if (participants.isEmpty) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -363,12 +433,22 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: participants.map((participant) {
+                                  // デバッグ用：参加者の全データをログ出力
+                                  print(
+                                      'DEBUG: Participant raw data: $participant');
+
                                   final userId =
                                       participant['user_id'] as String;
-                                  final userName =
-                                      participant['user_name'] as String;
+                                  final userName = participant['user_name']
+                                          as String? ??
+                                      participant['user_email'] as String? ??
+                                      'ユーザー';
                                   final isSelected =
                                       participationList[userId] ?? false;
+
+                                  // デバッグ用：参加メンバーの状態をログ出力
+                                  print(
+                                      'DEBUG: Participant $userName ($userId) isSelected: $isSelected');
 
                                   return GestureDetector(
                                     onTap: () {
@@ -590,6 +670,8 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
 
                   final currentSpace =
                       ref.read(firestoreSpacesProvider)?.currentSpace;
+                  final currentUser = ref.read(currentUserProvider);
+
                   if (currentSpace == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -600,7 +682,21 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                     return;
                   }
 
+                  if (currentUser == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ログインが必要です'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
                   try {
+                    // デバッグ用：参加メンバーの状態をログ出力
+                    print(
+                        'DEBUG: Saving schedule with participation list: $participationList');
+
                     bool success = false;
 
                     if (widget.initialSchedule != null) {
@@ -649,6 +745,65 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                     }
 
                     if (success) {
+                      // 通知をスケジュール
+                      final notificationService =
+                          ref.read(notificationServiceProvider);
+                      final notificationSettings = {
+                        'fiveMinutesBefore': fiveMinutesBefore,
+                        'tenMinutesBefore': tenMinutesBefore,
+                        'thirtyMinutesBefore': thirtyMinutesBefore,
+                        'oneHourBefore': oneHourBefore,
+                        'threeHoursBefore': threeHoursBefore,
+                        'sixHoursBefore': sixHoursBefore,
+                        'twelveHoursBefore': twelveHoursBefore,
+                        'oneDayBefore': oneDayBefore,
+                      };
+
+                      // スケジュールIDを取得（新規作成の場合は最新のスケジュールから取得）
+                      String scheduleId = widget.initialSchedule?.id ?? '';
+                      if (scheduleId.isEmpty) {
+                        // 新規作成の場合、最新のスケジュールからIDを取得
+                        final schedules = ref
+                            .read(scheduleFirestoreProvider.notifier)
+                            .getSchedulesForDate(startDateTime);
+                        if (schedules.isNotEmpty) {
+                          scheduleId = schedules.last.id ?? '';
+                        }
+                      }
+
+                      if (scheduleId.isNotEmpty) {
+                        await notificationService
+                            .scheduleNotificationsForSchedule(
+                          scheduleId: scheduleId,
+                          title: titleController.text.trim(),
+                          startTime: startDateTime,
+                          notificationSettings: notificationSettings,
+                          spaceId: currentSpace.id, // スペースIDを追加
+                        );
+
+                        // 新規作成の場合、スペース参加ユーザーにスケジュール作成通知を送信
+                        if (widget.initialSchedule == null) {
+                          final userNotificationSettings =
+                              await notificationService
+                                  .getNotificationSettings();
+                          if (userNotificationSettings[
+                                  'scheduleNotifications'] ==
+                              true) {
+                            final remoteNotificationService =
+                                RemoteNotificationService();
+                            await remoteNotificationService
+                                .sendScheduleCreatedNotification(
+                              spaceId: currentSpace.id,
+                              scheduleId: scheduleId,
+                              scheduleTitle: titleController.text.trim(),
+                              createdByUserName: currentUser.displayName ??
+                                  currentUser.email ??
+                                  'ユーザー',
+                            );
+                          }
+                        }
+                      }
+
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

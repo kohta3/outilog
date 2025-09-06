@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:outi_log/infrastructure/schedule_infrastructure.dart';
 import 'package:outi_log/provider/flutter_secure_storage_provider.dart';

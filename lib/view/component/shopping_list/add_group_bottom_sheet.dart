@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/provider/shopping_list_provider.dart';
 import 'package:outi_log/provider/auth_provider.dart';
+import 'package:outi_log/provider/firestore_space_provider.dart';
+import 'package:outi_log/provider/notification_service_provider.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:outi_log/models/shopping_list_model.dart';
 
@@ -151,8 +154,16 @@ class _AddGroupBottomSheetState extends ConsumerState<AddGroupBottomSheet> {
     }
 
     final currentUser = ref.read(currentUserProvider);
+    final spaceState = ref.read(firestoreSpacesProvider);
+    final currentSpace = spaceState?.currentSpace;
+
     if (currentUser == null) {
       Toast.show(context, 'ログインが必要です');
+      return;
+    }
+
+    if (currentSpace == null) {
+      Toast.show(context, 'スペースが選択されていません');
       return;
     }
 
@@ -172,6 +183,21 @@ class _AddGroupBottomSheetState extends ConsumerState<AddGroupBottomSheet> {
                 );
 
         if (groupId != null) {
+          // 買い物リストグループ追加通知をスペース参加ユーザーに送信
+          final notificationService = ref.read(notificationServiceProvider);
+          final userNotificationSettings =
+              await notificationService.getNotificationSettings();
+
+          if (userNotificationSettings['shoppingListNotifications'] == true) {
+            final remoteNotificationService = RemoteNotificationService();
+            await remoteNotificationService.sendShoppingListGroupNotification(
+              spaceId: currentSpace.id,
+              groupName: groupName,
+              createdByUserName:
+                  currentUser.displayName ?? currentUser.email ?? 'ユーザー',
+            );
+          }
+
           Toast.show(context, 'グループを作成しました');
           Navigator.of(context).pop(true);
         } else {

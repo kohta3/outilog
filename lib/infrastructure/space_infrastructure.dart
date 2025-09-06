@@ -88,11 +88,6 @@ class SpaceInfrastructure {
         for (final spaceDoc in spacesQuery.docs) {
           final spaceData = spaceDoc.data();
 
-          // デバッグログを追加
-          print('DEBUG: Space data from getUserSpaces for ${spaceDoc.id}:');
-          print('DEBUG: header_image_url: ${spaceData['header_image_url']}');
-          print('DEBUG: space_name: ${spaceData['space_name']}');
-
           // 参加者情報を追加
           final participantInfo = participantsQuery.docs
               .firstWhere((p) => p.data()['space_id'] == spaceDoc.id);
@@ -117,8 +112,6 @@ class SpaceInfrastructure {
     } catch (e) {
       // セキュリティルールエラーの場合は詳細なメッセージを出力
       if (e.toString().contains('permission-denied')) {
-        print('DEBUG: Firestore セキュリティルールエラー: $e');
-        print('DEBUG: Firebase Console でセキュリティルールを設定してください');
         throw Exception('Firestoreのアクセス権限がありません。セキュリティルールを設定してください。');
       }
       throw Exception('スペース一覧の取得に失敗しました: $e');
@@ -131,14 +124,6 @@ class SpaceInfrastructure {
       // スペース基本情報を取得
       final spaceDoc =
           await _firestore.collection(_spacesCollection).doc(spaceId).get();
-
-      if (spaceDoc.exists) {
-        final spaceData = spaceDoc.data()!;
-        print('DEBUG: Raw Firestore data for space $spaceId:');
-        print('DEBUG: header_image_url: ${spaceData['header_image_url']}');
-        print('DEBUG: space_name: ${spaceData['space_name']}');
-        print('DEBUG: All fields: ${spaceData.keys.toList()}');
-      }
 
       if (!spaceDoc.exists) {
         return null;
@@ -223,6 +208,37 @@ class SpaceInfrastructure {
       return true;
     } catch (e) {
       throw Exception('参加者の追加に失敗しました: $e');
+    }
+  }
+
+  /// 参加者のユーザー名を更新
+  Future<bool> updateParticipantUserName({
+    required String spaceId,
+    required String userId,
+    required String newUserName,
+  }) async {
+    try {
+      // 参加者を検索
+      final participantQuery = await _firestore
+          .collection(_participantsCollection)
+          .where('space_id', isEqualTo: spaceId)
+          .where('user_id', isEqualTo: userId)
+          .where('is_active', isEqualTo: true)
+          .get();
+
+      if (participantQuery.docs.isEmpty) {
+        throw Exception('参加者が見つかりません');
+      }
+
+      // ユーザー名を更新
+      await participantQuery.docs.first.reference.update({
+        'user_name': newUserName,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      print('DEBUG: Error updating participant user_name: $e');
+      return false;
     }
   }
 

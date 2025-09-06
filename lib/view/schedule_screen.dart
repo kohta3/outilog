@@ -6,6 +6,7 @@ import 'package:holiday_jp/holiday_jp.dart' as holiday_jp;
 import 'package:intl/intl.dart';
 import '../provider/event_provider.dart';
 import 'package:outi_log/provider/schedule_firestore_provider.dart';
+import 'package:outi_log/provider/notification_service_provider.dart';
 import 'package:outi_log/models/schedule_model.dart';
 
 import 'package:outi_log/constant/color.dart';
@@ -431,6 +432,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     .read(scheduleFirestoreProvider.notifier)
                     .deleteSchedule(schedule.id!);
                 if (success) {
+                  // スケジュール削除時に通知もキャンセル
+                  final notificationService = ref.read(notificationServiceProvider);
+                  await notificationService.cancelAllNotificationsForSchedule(schedule.id!);
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('予定を削除しました'),

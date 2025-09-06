@@ -48,12 +48,9 @@ class SpaceDataMigration {
     required String userEmail,
   }) async {
     try {
-      debugPrint('DEBUG: Starting space data migration');
-
       // ローカルのスペースデータを取得
       final localSpaces = await _localRepo.getSpaces();
       if (localSpaces == null || localSpaces.spaces.isEmpty) {
-        debugPrint('DEBUG: No local spaces to migrate');
         await _markMigrationCompleted();
         return true;
       }
@@ -66,7 +63,6 @@ class SpaceDataMigration {
           if (space.ownerId == userId) {
             await _migrateSpace(space, userName, userEmail);
             successCount++;
-            debugPrint('DEBUG: Migrated space: ${space.spaceName}');
           }
         } catch (e) {
           debugPrint('DEBUG: Error migrating space ${space.spaceName}: $e');

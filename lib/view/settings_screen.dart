@@ -8,6 +8,7 @@ import 'package:outi_log/infrastructure/storage_infrastructure.dart';
 import 'package:outi_log/models/user_model.dart';
 import 'package:outi_log/provider/flutter_secure_storage_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
+import 'package:outi_log/provider/notification_service_provider.dart';
 import 'package:outi_log/repository/login_repo.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -55,9 +56,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final spaces = ref.watch(spacesProvider);
     final canCreateSpace = ref.watch(spacesProvider.notifier).canCreateSpace;
-    final maxSpaces = spaces?.maxSpaces ?? 2;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -165,25 +164,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           // 通知設定セクション
           const _SettingsSection(title: '通知設定'),
-          ListTile(
-            leading: const Icon(Icons.notifications),
-            title: const Text('プッシュ通知'),
-            trailing: Switch(
-              value: true, // TODO: 実際の設定値を使用
-              onChanged: (value) {
-                // TODO: 通知設定を変更
-              },
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.email),
-            title: const Text('メール通知'),
-            trailing: Switch(
-              value: false, // TODO: 実際の設定値を使用
-              onChanged: (value) {
-                // TODO: メール通知設定を変更
-              },
-            ),
+          Consumer(
+            builder: (context, ref, child) {
+              final notificationSettings =
+                  ref.watch(notificationSettingsProvider);
+
+              return Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.schedule),
+                    title: const Text('スケジュール通知'),
+                    subtitle: const Text('予定の通知を受け取る'),
+                    trailing: Switch(
+                      value:
+                          notificationSettings['scheduleNotifications'] ?? true,
+                      onChanged: (value) async {
+                        await ref
+                            .read(notificationSettingsProvider.notifier)
+                            .toggleScheduleNotifications(value);
+                      },
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.account_balance_wallet),
+                    title: const Text('家計簿通知'),
+                    subtitle: const Text('家計簿の更新通知を受け取る'),
+                    trailing: Switch(
+                      value: notificationSettings[
+                              'householdBudgetNotifications'] ??
+                          true,
+                      onChanged: (value) async {
+                        await ref
+                            .read(notificationSettingsProvider.notifier)
+                            .toggleHouseholdBudgetNotifications(value);
+                      },
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.shopping_cart),
+                    title: const Text('買い物リスト通知'),
+                    subtitle: const Text('買い物リストの更新通知を受け取る'),
+                    trailing: Switch(
+                      value:
+                          notificationSettings['shoppingListNotifications'] ??
+                              true,
+                      onChanged: (value) async {
+                        await ref
+                            .read(notificationSettingsProvider.notifier)
+                            .toggleShoppingListNotifications(value);
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           const Divider(),
 

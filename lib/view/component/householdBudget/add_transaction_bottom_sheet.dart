@@ -6,6 +6,8 @@ import 'package:outi_log/infrastructure/transaction_firestore_infrastructure.dar
 import 'package:outi_log/provider/auth_provider.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/category_provider.dart';
+import 'package:outi_log/provider/notification_service_provider.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -156,6 +158,23 @@ class _AddTransactionBottomSheetState
         createdBy: currentUser.uid,
         description: _memoController.text,
       );
+
+      // 家計簿入力通知をスペース参加ユーザーに送信
+      final notificationService = ref.read(notificationServiceProvider);
+      final userNotificationSettings =
+          await notificationService.getNotificationSettings();
+
+      if (userNotificationSettings['householdBudgetNotifications'] == true) {
+        final remoteNotificationService = RemoteNotificationService();
+        await remoteNotificationService.sendHouseholdBudgetNotification(
+          spaceId: currentSpace.id,
+          transactionType: transactionType == 'expense' ? '支出' : '収入',
+          amount: amount.toString(),
+          category: categoryName,
+          createdByUserName:
+              currentUser.displayName ?? currentUser.email ?? 'ユーザー',
+        );
+      }
 
       Toast.show(
           context, '${transactionType == 'expense' ? '支出' : '収入'}を保存しました');
