@@ -8,6 +8,9 @@ import 'package:outi_log/provider/notification_service_provider.dart';
 import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:outi_log/models/shopping_list_model.dart';
+import 'package:outi_log/services/analytics_service.dart';
+import 'package:outi_log/services/admob_service.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AddGroupBottomSheet extends ConsumerStatefulWidget {
   final ShoppingListGroupModel? group; // nullの場合は新規作成
@@ -23,6 +26,7 @@ class _AddGroupBottomSheetState extends ConsumerState<AddGroupBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _groupNameController = TextEditingController();
   bool _isSaving = false;
+  bool _isShowingAd = false; // インタースティシャル広告表示中フラグ
 
   @override
   void initState() {
@@ -35,7 +39,36 @@ class _AddGroupBottomSheetState extends ConsumerState<AddGroupBottomSheet> {
   @override
   void dispose() {
     _groupNameController.dispose();
+    _isShowingAd = false; // フラグをリセット
     super.dispose();
+  }
+
+  /// インタースティシャル広告を表示する関数
+  Future<void> _showInterstitialAd() async {
+    // 既に広告を表示中またはコンテキストが無効な場合は処理を停止
+    if (_isShowingAd || !mounted) return;
+
+    // 広告表示フラグを設定
+    _isShowingAd = true;
+
+    try {
+      final admobService = AdMobService();
+
+      await admobService.loadInterstitialAd(
+        onAdLoaded: (InterstitialAd ad) {
+          if (!mounted) return;
+          ad.show();
+        },
+        onAdFailedToLoad: (LoadAdError error) {
+          print('インタースティシャル広告の読み込みに失敗: $error');
+        },
+      );
+    } catch (e) {
+      print('インタースティシャル広告の表示中にエラー: $e');
+    } finally {
+      // 広告表示フラグをリセット
+      _isShowingAd = false;
+    }
   }
 
   @override
@@ -183,6 +216,9 @@ class _AddGroupBottomSheetState extends ConsumerState<AddGroupBottomSheet> {
                 );
 
         if (groupId != null) {
+          // 買い物リスト作成成功時にAnalyticsイベントを記録
+          AnalyticsService().logShoppingListCreate(itemCount: 0);
+
           // 買い物リストグループ追加通知をスペース参加ユーザーに送信
           final notificationService = ref.read(notificationServiceProvider);
           final userNotificationSettings =
@@ -196,6 +232,11 @@ class _AddGroupBottomSheetState extends ConsumerState<AddGroupBottomSheet> {
               createdByUserName:
                   currentUser.displayName ?? currentUser.email ?? 'ユーザー',
             );
+          }
+
+          // グループ作成成功後にインタースティシャル広告を表示（新規作成時のみ）
+          if (!_isShowingAd) {
+            await _showInterstitialAd();
           }
 
           Toast.show(context, 'グループを作成しました');

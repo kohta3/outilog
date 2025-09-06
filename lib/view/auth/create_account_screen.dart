@@ -13,6 +13,8 @@ import 'package:outi_log/view/auth/create_send_email_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:outi_log/services/analytics_service.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
@@ -50,7 +52,13 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
       UserFirestoreInfrastructure(),
       StorageInfrastructure(),
+      RemoteNotificationService(),
     );
+
+    // アカウント作成画面の表示を記録
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AnalyticsService().logScreenView(screenName: 'create_account');
+    });
   }
 
   @override
@@ -160,6 +168,9 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       );
 
       if (userCredential != null) {
+        // アカウント作成成功時にAnalyticsイベントを記録
+        AnalyticsService().logSignUp(signUpMethod: 'email');
+
         Toast.show(context, '認証メールを送信しました。');
         Navigator.pushReplacement(
           context,

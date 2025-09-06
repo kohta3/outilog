@@ -10,6 +10,7 @@ import 'package:outi_log/provider/transaction_provider.dart';
 import 'package:outi_log/provider/schedule_firestore_provider.dart';
 import 'package:outi_log/provider/category_provider.dart';
 import 'package:outi_log/view/component/app_drawer.dart';
+import 'package:outi_log/view/component/advertisement/banner_ad_widget.dart';
 import 'package:outi_log/view/dashboard_screen.dart';
 import 'package:outi_log/view/household_budget.dart';
 import 'package:outi_log/view/schedule_screen.dart';
@@ -159,29 +160,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ? _screens[selectedIndex]
             : _buildNoSpaceView(),
         bottomNavigationBar: currentSpace != null
-            ? BottomNavigationBar(
-                type: BottomNavigationBarType.fixed,
-                currentIndex: selectedIndex,
-                onTap: (index) =>
-                    ref.read(homeScreenIndexProvider.notifier).state = index,
-                selectedItemColor: themeColor,
-                unselectedItemColor: Colors.grey,
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.home),
-                    label: 'ホーム',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.calendar_today),
-                    label: 'スケジュール',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.account_balance_wallet),
-                    label: '家計簿',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.shopping_cart),
-                    label: '買い物リスト',
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // バナー広告を追加
+                  const BottomBannerAdWidget(),
+                  BottomNavigationBar(
+                    type: BottomNavigationBarType.fixed,
+                    currentIndex: selectedIndex,
+                    onTap: (index) {
+                      ref.read(homeScreenIndexProvider.notifier).state = index;
+                    },
+                    selectedItemColor: themeColor,
+                    unselectedItemColor: Colors.grey,
+                    items: const [
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.home),
+                        label: 'ホーム',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.calendar_today),
+                        label: 'スケジュール',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.account_balance_wallet),
+                        label: '家計簿',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.shopping_cart),
+                        label: '買い物リスト',
+                      ),
+                    ],
                   ),
                 ],
               )

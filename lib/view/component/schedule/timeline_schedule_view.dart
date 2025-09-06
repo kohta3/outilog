@@ -165,8 +165,17 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
       final earliestTime = timedSchedules.first.startDateTime;
       final latestTime = timedSchedules.last.endDateTime;
 
+      // 開始時刻は分単位まで考慮
       startHour = earliestTime.hour;
-      endHour = latestTime.hour + (latestTime.minute > 0 ? 1 : 0);
+      if (earliestTime.minute > 0) {
+        startHour = (startHour - 1).clamp(0, 23);
+      }
+
+      // 終了時刻は分単位まで考慮
+      endHour = latestTime.hour;
+      if (latestTime.minute > 0) {
+        endHour = endHour + 1;
+      }
 
       // 最低6時間のタイムラインを確保
       if (endHour - startHour < 6) {
@@ -343,13 +352,22 @@ class _TimelineScheduleViewState extends State<TimelineScheduleView>
   // Googleカレンダー風の予定表示
   Widget _buildGoogleStyleEvent(
       ScheduleModel schedule, int startHour, double hourHeight, int index) {
+    // 時間軸の開始時刻を基準とした分単位での計算
     final startMinutes = (schedule.startDateTime.hour - startHour) * 60 +
         schedule.startDateTime.minute;
     final endMinutes = (schedule.endDateTime.hour - startHour) * 60 +
         schedule.endDateTime.minute;
 
+    // 時間軸の開始時刻より前の予定は表示しない
+    if (startMinutes < 0) {
+      print('  Skipping schedule (before timeline start)');
+      return SizedBox.shrink();
+    }
+
     final top = (startMinutes / 60) * hourHeight;
     final height = ((endMinutes - startMinutes) / 60) * hourHeight;
+
+    print('  Calculated top: $top, height: $height');
 
     // 重複時の横位置調整
     final leftOffset = (index % 3) * 2.0; // 最大3つまで横にずらす

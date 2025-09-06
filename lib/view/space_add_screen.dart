@@ -9,6 +9,7 @@ import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:outi_log/view/space_invite_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:outi_log/services/analytics_service.dart';
 
 class SpaceAddScreen extends ConsumerStatefulWidget {
   const SpaceAddScreen({super.key});
@@ -119,6 +120,8 @@ class _SpaceAddScreenState extends ConsumerState<SpaceAddScreen> {
     try {
       final success = await _performSpaceCreation();
       if (success) {
+        // スペース作成成功時にAnalyticsイベントを記録
+        AnalyticsService().logSpaceCreate();
         _handleSpaceCreationSuccess();
       } else {
         _handleSpaceCreationFailure();

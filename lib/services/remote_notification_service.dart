@@ -1,6 +1,9 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class RemoteNotificationService {
   static final RemoteNotificationService _instance =
@@ -62,8 +65,11 @@ class RemoteNotificationService {
         await _secureStorage.write(key: _fcmTokenKey, value: token);
         print('FCM: トークンを保存しました: $token');
 
-        // Firestoreにトークンを保存（ユーザーIDが必要）
-        // この部分は認証後に実装
+        // 認証済みユーザーの場合は自動的にFirestoreに保存
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          await saveUserFCMToken(currentUser.uid);
+        }
       }
     } catch (e) {
       print('FCMトークン保存エラー: $e');
@@ -159,19 +165,32 @@ class RemoteNotificationService {
   Future<void> _sendNotificationToToken(
       String token, Map<String, dynamic> notificationData) async {
     try {
-      // 実際のFCM送信はサーバーサイドで行う必要があります
-      // ここでは通知データをFirestoreに保存して、サーバーサイドで処理するようにします
+      // クライアントサイドから直接FCM APIを呼び出すのは適切ではないため、
+      // Firestoreに通知データを保存してサーバーサイドで処理する
 
       await _firestore.collection('pending_notifications').add({
         'fcm_token': token,
         'notification_data': notificationData,
         'created_at': FieldValue.serverTimestamp(),
         'status': 'pending',
+        'retry_count': 0,
+        'target_platform': 'all', // Android/iOS両方に対応
       });
 
       print('FCM: 通知をキューに追加しました: $token');
+      print(
+          'FCM: 通知内容 - タイトル: ${notificationData['title']}, 本文: ${notificationData['body']}');
     } catch (e) {
       print('FCM: 通知送信エラー: $e');
+
+      // エラーの場合はFirestoreに保存
+      await _firestore.collection('pending_notifications').add({
+        'fcm_token': token,
+        'notification_data': notificationData,
+        'created_at': FieldValue.serverTimestamp(),
+        'status': 'error',
+        'error': e.toString(),
+      });
     }
   }
 

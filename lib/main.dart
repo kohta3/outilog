@@ -11,6 +11,8 @@ import 'package:outi_log/view/home_screen.dart';
 import 'package:outi_log/view/auth/login_screen.dart';
 import 'package:outi_log/services/notification_service.dart';
 import 'package:outi_log/services/remote_notification_service.dart';
+import 'package:outi_log/services/analytics_service.dart';
+import 'package:outi_log/services/admob_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -39,6 +41,14 @@ void main() async {
   // 通知サービスを初期化
   final notificationService = NotificationService();
   await notificationService.initialize();
+
+  // Analyticsサービスを初期化
+  final analyticsService = AnalyticsService();
+  await analyticsService.initialize();
+
+  // AdMobサービスを初期化
+  final admobService = AdMobService();
+  await admobService.initialize();
 
   runApp(
     ProviderScope(

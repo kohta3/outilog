@@ -10,6 +10,7 @@ import 'package:outi_log/provider/notification_service_provider.dart';
 import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:outi_log/services/analytics_service.dart';
 
 // カンマ区切り数値入力フォーマッター
 class _NumberInputFormatter extends TextInputFormatter {
@@ -158,6 +159,19 @@ class _AddTransactionBottomSheetState
         createdBy: currentUser.uid,
         description: _memoController.text,
       );
+
+      // Analyticsイベントを記録
+      if (transactionType == 'expense') {
+        AnalyticsService().logExpenseRecord(
+          amount: amount.toDouble(),
+          category: categoryName,
+        );
+      } else {
+        AnalyticsService().logIncomeRecord(
+          amount: amount.toDouble(),
+          category: categoryName,
+        );
+      }
 
       // 家計簿入力通知をスペース参加ユーザーに送信
       final notificationService = ref.read(notificationServiceProvider);

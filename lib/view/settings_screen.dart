@@ -10,6 +10,7 @@ import 'package:outi_log/provider/flutter_secure_storage_provider.dart';
 import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/notification_service_provider.dart';
 import 'package:outi_log/repository/login_repo.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -41,6 +42,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
         UserFirestoreInfrastructure(),
         StorageInfrastructure(),
+        RemoteNotificationService(),
       );
 
       _isEmailVerified = await authController.checkEmailVerification();
@@ -258,6 +260,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
 
+          // 危険な操作セクション
+          const _SettingsSection(title: 'アカウント管理'),
+          ListTile(
+            leading: const Icon(Icons.delete_forever, color: Colors.red),
+            title: const Text('アカウントを削除'),
+            subtitle: const Text('アカウントとすべてのデータを削除'),
+            onTap: () {
+              _showDeleteAccountDialog(context, ref);
+            },
+          ),
+          const Divider(),
+
           // ログアウト（最後に配置、危険な操作のため）
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -350,6 +364,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
         UserFirestoreInfrastructure(),
         StorageInfrastructure(),
+        RemoteNotificationService(),
       );
 
       await authController.resendEmailVerification();
@@ -385,6 +400,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
         UserFirestoreInfrastructure(),
         StorageInfrastructure(),
+        RemoteNotificationService(),
       );
 
       await authController.signOut(context: context);
@@ -458,6 +474,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             flutterSecureStorageControllerProvider.notifier)),
                         UserFirestoreInfrastructure(),
                         StorageInfrastructure(),
+                        RemoteNotificationService(),
                       );
 
                       final success = await authController.changeEmail(
@@ -578,6 +595,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             flutterSecureStorageControllerProvider.notifier)),
                         UserFirestoreInfrastructure(),
                         StorageInfrastructure(),
+                        RemoteNotificationService(),
                       );
 
                       final success = await authController.changePassword(
@@ -607,6 +625,121 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+
+  void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('アカウントを削除'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('⚠️ この操作は取り消せません！'),
+            SizedBox(height: 16),
+            Text('削除されるデータ:'),
+            Text('• アカウント情報'),
+            Text('• スケジュールデータ'),
+            Text('• 買い物リスト'),
+            Text('• 家計簿データ'),
+            Text('• 共有スペースの情報'),
+            Text('• プロフィール画像'),
+            SizedBox(height: 16),
+            Text('本当にアカウントを削除しますか？'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showDeleteAccountConfirmationDialog(context, ref);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('削除する'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountConfirmationDialog(
+      BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('最終確認'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('「アカウントを削除」と入力してください'),
+            SizedBox(height: 16),
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'アカウントを削除',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteAccount(context, ref);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('削除実行'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    try {
+      final authController = AuthController(
+        AuthInfrastructure(),
+        LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
+        UserFirestoreInfrastructure(),
+        StorageInfrastructure(),
+        RemoteNotificationService(),
+      );
+
+      await authController.deleteAccount(context: context);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('アカウントを削除しました'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('アカウント削除に失敗しました: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 }
 
 class ProfileEditDialog extends ConsumerStatefulWidget {
@@ -633,6 +766,7 @@ class _ProfileEditDialogState extends ConsumerState<ProfileEditDialog> {
       LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
       UserFirestoreInfrastructure(),
       StorageInfrastructure(),
+      RemoteNotificationService(),
     );
     _loadUserData();
 

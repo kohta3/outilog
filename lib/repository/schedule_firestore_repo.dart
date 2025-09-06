@@ -41,7 +41,7 @@ class ScheduleFirestoreRepo {
   }
 
   /// スケジュールを追加
-  Future<bool> addSchedule({
+  Future<String?> addSchedule({
     required String spaceId,
     required String title,
     required String description,
@@ -61,7 +61,7 @@ class ScheduleFirestoreRepo {
     Map<String, bool> participationList = const {},
   }) async {
     try {
-      await _infrastructure.addSchedule(
+      final scheduleId = await _infrastructure.addSchedule(
         spaceId: spaceId,
         title: title,
         description: description,
@@ -80,10 +80,10 @@ class ScheduleFirestoreRepo {
         oneDayBefore: oneDayBefore,
         participationList: participationList,
       );
-      return true;
+      return scheduleId;
     } catch (e) {
       print('DEBUG: Error adding schedule: $e');
-      return false;
+      return null;
     }
   }
 

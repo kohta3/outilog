@@ -5,6 +5,7 @@ import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:outi_log/services/analytics_service.dart';
 
 class SpaceInviteScreen extends ConsumerStatefulWidget {
   final String spaceId;
@@ -45,6 +46,9 @@ class _SpaceInviteScreenState extends ConsumerState<SpaceInviteScreen> {
       setState(() {
         _inviteCode = inviteCode;
       });
+
+      // 招待コード生成時にAnalyticsイベントを記録
+      AnalyticsService().logSpaceInvite();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

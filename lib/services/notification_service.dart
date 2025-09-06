@@ -88,6 +88,19 @@ class NotificationService {
     required String notificationType, // '5min', '10min', '30min', '1hour', etc.
   }) async {
     try {
+      final androidPlugin =
+          _notifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidPlugin != null) {
+        final canScheduleExactAlarms =
+            await androidPlugin.canScheduleExactNotifications();
+        if (canScheduleExactAlarms != null && !canScheduleExactAlarms) {
+          print('正確な時刻通知の権限がありません。通知をスケジュールできません。');
+          return;
+        }
+      }
+
       // 通知IDを生成（スケジュールID + 通知タイプのハッシュ）
       final notificationId =
           _generateNotificationId(scheduleId, notificationType);
@@ -128,7 +141,6 @@ class NotificationService {
         }),
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
       );
 
       // スケジュールされた通知をセキュアストレージに保存
@@ -136,6 +148,8 @@ class NotificationService {
           scheduleId, notificationId, notificationType, scheduledTime);
 
       print('通知をスケジュールしました: $title at $scheduledTime');
+      print('通知ID: $notificationId, 通知タイプ: $notificationType');
+      print('現在時刻: ${DateTime.now()}, スケジュール時刻: $scheduledTime');
     } catch (e) {
       print('通知のスケジュールに失敗しました: $e');
     }
@@ -359,6 +373,8 @@ class NotificationService {
           }
 
           // ローカル通知をスケジュール
+          print(
+              'DEBUG: 通知をスケジュール中 - ID: $scheduleId, タイプ: $notificationType, 時刻: $notificationTime');
           await scheduleNotification(
             scheduleId: scheduleId,
             title: '予定のお知らせ',
@@ -369,6 +385,8 @@ class NotificationService {
 
           // スペースIDが指定されている場合、スペース参加ユーザー全員にリモート通知を送信
           if (spaceId != null) {
+            print(
+                'DEBUG: リモート通知を送信中 - スペースID: $spaceId, スケジュールID: $scheduleId');
             await _remoteNotificationService
                 .sendScheduleNotificationToSpaceMembers(
               spaceId: spaceId,

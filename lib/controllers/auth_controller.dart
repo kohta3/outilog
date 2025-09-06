@@ -11,18 +11,21 @@ import 'package:outi_log/view/auth/login_screen.dart';
 import 'package:outi_log/view/auth/create_send_email_screen.dart';
 import 'package:outi_log/view/home_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 
 class AuthController {
   final AuthInfrastructure _authInfrastructure;
   final LoginRepo _loginRepo;
   final UserFirestoreInfrastructure _userFirestoreInfrastructure;
   final StorageInfrastructure _storageInfrastructure;
+  final RemoteNotificationService _remoteNotificationService;
 
   AuthController(
     this._authInfrastructure,
     this._loginRepo,
     this._userFirestoreInfrastructure,
     this._storageInfrastructure,
+    this._remoteNotificationService,
   );
 
   /// 新規アカウント作成
@@ -69,6 +72,10 @@ class AuthController {
           updatedAt: DateTime.now(),
         );
         await _userFirestoreInfrastructure.createUser(user);
+
+        // FCMトークンをFirestoreに保存
+        await _remoteNotificationService
+            .saveUserFCMToken(userCredential.user!.uid);
       }
 
       if (context.mounted) {
@@ -113,6 +120,9 @@ class AuthController {
         final currentUser = await getCurrentUser();
         if (currentUser != null) {
           await _loginRepo.cacheUserData(currentUser);
+
+          // FCMトークンをFirestoreに保存
+          await _remoteNotificationService.saveUserFCMToken(currentUser.id);
         }
 
         // ホームタブにリダイレクトするためにインデックスをリセット
@@ -166,6 +176,9 @@ class AuthController {
         final currentUser = await getCurrentUser();
         if (currentUser != null) {
           await _loginRepo.cacheUserData(currentUser);
+
+          // FCMトークンをFirestoreに保存
+          await _remoteNotificationService.saveUserFCMToken(currentUser.id);
         }
 
         // ホームタブにリダイレクトするためにインデックスをリセット
@@ -525,6 +538,67 @@ class AuthController {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
+  /// アカウントを削除する
+  Future<bool> deleteAccount({
+    required BuildContext context,
+  }) async {
+    try {
+      final user = _authInfrastructure.currentUser;
+      if (user == null) {
+        if (context.mounted) {
+          Toast.show(context, 'ユーザーが認証されていません');
+        }
+        return false;
+      }
+
+      final userId = user.uid;
+
+      // Firestoreのユーザーデータを削除
+      await _userFirestoreInfrastructure.deleteUser(userId);
+
+      // プロフィール画像を削除
+      final currentUser = await getCurrentUser();
+      if (currentUser?.profileImageUrl != null) {
+        await _storageInfrastructure
+            .deleteProfileImage(currentUser!.profileImageUrl!);
+      }
+
+      // Firebase Authenticationのアカウントを削除
+      await user.delete();
+
+      // セキュアストレージの全データを削除
+      await _loginRepo.logout();
+
+      if (context.mounted) {
+        Toast.show(context, 'アカウントを削除しました');
+
+        // ログイン画面に遷移
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+
+      return true;
+    } catch (e) {
+      if (context.mounted) {
+        String errorMessage = 'アカウント削除に失敗しました';
+        if (e.toString().contains('requires-recent-login')) {
+          errorMessage = 'セキュリティのため、再度ログインしてください';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$errorMessage: $e'),
             backgroundColor: Colors.red,
           ),
         );

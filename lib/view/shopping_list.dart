@@ -4,6 +4,7 @@ import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/provider/shopping_list_provider.dart';
 import 'package:outi_log/view/component/shopping_list/add_group_bottom_sheet.dart';
 import 'package:outi_log/view/component/shopping_list/add_item_bottom_sheet.dart';
+import 'package:outi_log/view/component/advertisement/native_ad_widget.dart';
 import 'package:outi_log/models/shopping_list_model.dart';
 
 class ShoppingListScreen extends ConsumerStatefulWidget {
@@ -42,9 +43,13 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   child: ElevatedButton(
-                    onPressed: () => _showAddGroupSheet(),
+                    onPressed: shoppingListState.groups.length >= 5
+                        ? null
+                        : () => _showAddGroupSheet(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: shoppingListState.groups.length >= 5
+                          ? Colors.grey
+                          : Colors.blue,
                       foregroundColor: Colors.white,
                       elevation: 2,
                       shadowColor: Colors.blue.withOpacity(0.3),
@@ -134,6 +139,31 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
               ),
             ),
 
+          // グループ数制限の案内
+          if (shoppingListState.groups.length >= 5)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.orange.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '買い物リストグループは最大5件まで作成できます。新しいグループを作成するには、既存のグループを削除してください。',
+                      style: TextStyle(color: Colors.orange.shade700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // メインコンテンツ
           Expanded(
             child: shoppingListState.isLoading
@@ -181,14 +211,18 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
       onRefresh: () async {
         await ref.read(shoppingListProvider.notifier).loadGroups();
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: shoppingListState.groups.length,
-        itemBuilder: (context, index) {
-          final group = shoppingListState.groups[index];
-          return _buildExpandableGroupCard(group);
-        },
-      ),
+      child: _buildGroupsWithAds(shoppingListState),
+    );
+  }
+
+  Widget _buildGroupsWithAds(shoppingListState) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: shoppingListState.groups.length,
+      itemBuilder: (context, index) {
+        final group = shoppingListState.groups[index];
+        return _buildExpandableGroupCard(group);
+      },
     );
   }
 
@@ -384,60 +418,74 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
       );
     }
 
-    return Column(
-      children: [
-        ...items.map((item) => _buildItemCard(item)).toList(),
-        // 追加ボタン
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            child: Card(
-              elevation: 2,
-              shadowColor: themeColor.withOpacity(0.2),
-              shape: RoundedRectangleBorder(
+    List<Widget> widgets = [];
+
+    // アイテムを追加し、4アイテムごとにネイティブ広告を挿入
+    for (int i = 0; i < items.length; i++) {
+      widgets.add(_buildItemCard(items[i]));
+
+      // 4アイテムごとにネイティブ広告を挿入
+      if ((i + 1) % 4 == 0) {
+        widgets.add(const ListNativeAdWidget(
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ));
+      }
+    }
+
+    // 追加ボタン
+    widgets.add(
+      Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          child: Card(
+            elevation: 2,
+            shadowColor: themeColor.withOpacity(0.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: themeColor.withOpacity(0.3), width: 1.5),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                side:
-                    BorderSide(color: themeColor.withOpacity(0.3), width: 1.5),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    themeColor.withOpacity(0.05),
+                    themeColor.withOpacity(0.1),
+                  ],
+                ),
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      themeColor.withOpacity(0.05),
-                      themeColor.withOpacity(0.1),
-                    ],
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: themeColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.add, color: themeColor, size: 20),
+                ),
+                title: Text(
+                  'アイテムを追加',
+                  style: TextStyle(
+                    color: themeColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
                   ),
                 ),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: themeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.add, color: themeColor, size: 20),
-                  ),
-                  title: Text(
-                    'アイテムを追加',
-                    style: TextStyle(
-                      color: themeColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  onTap: () => _showAddItemSheet(group),
-                ),
+                onTap: () => _showAddItemSheet(group),
               ),
             ),
           ),
         ),
-      ],
+      ),
+    );
+
+    return Column(
+      children: widgets,
     );
   }
 

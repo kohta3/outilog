@@ -3,6 +3,7 @@ import 'package:outi_log/models/schedule_model.dart';
 import 'package:outi_log/repository/schedule_firestore_repo.dart';
 import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/auth_provider.dart';
+import 'package:outi_log/services/notification_service.dart';
 
 final scheduleFirestoreProvider =
     StateNotifierProvider<ScheduleFirestoreNotifier, List<ScheduleModel>>(
@@ -17,6 +18,7 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
   final ScheduleFirestoreRepo _repo;
   final String? _spaceId;
   final String? _userId;
+  final NotificationService _notificationService = NotificationService();
 
   ScheduleFirestoreNotifier(this._repo, this._spaceId, this._userId)
       : super([]) {
@@ -66,7 +68,7 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
 
     try {
       print('DEBUG: Adding schedule: $title');
-      final success = await _repo.addSchedule(
+      final scheduleId = await _repo.addSchedule(
         spaceId: _spaceId,
         title: title,
         description: description,
@@ -86,12 +88,53 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
         participationList: participationList,
       );
 
-      if (success) {
+      if (scheduleId != null) {
         await _loadSchedules(); // 再読み込み
+
+        // 通知設定がある場合はローカル通知をスケジュール
+        final notificationSettings = {
+          'fiveMinutesBefore': fiveMinutesBefore,
+          'tenMinutesBefore': tenMinutesBefore,
+          'thirtyMinutesBefore': thirtyMinutesBefore,
+          'oneHourBefore': oneHourBefore,
+          'threeHoursBefore': threeHoursBefore,
+          'sixHoursBefore': sixHoursBefore,
+          'twelveHoursBefore': twelveHoursBefore,
+          'oneDayBefore': oneDayBefore,
+        };
+
+        // 通知設定が有効なものがあるかチェック
+        final hasNotificationSettings =
+            notificationSettings.values.any((setting) => setting);
+
+        print('DEBUG: Notification settings: $notificationSettings');
+        print('DEBUG: Has notification settings: $hasNotificationSettings');
+
+        if (hasNotificationSettings) {
+          print(
+              'DEBUG: Scheduling notifications for schedule: $title (ID: $scheduleId)');
+          try {
+            await _notificationService.scheduleNotificationsForSchedule(
+              scheduleId: scheduleId,
+              title: title,
+              startTime: startTime,
+              notificationSettings: notificationSettings,
+              spaceId: _spaceId,
+            );
+            print('DEBUG: Notification scheduling completed successfully');
+          } catch (e) {
+            print('DEBUG: Error scheduling notifications: $e');
+          }
+        } else {
+          print(
+              'DEBUG: No notification settings enabled, skipping notification scheduling');
+        }
+
         print('DEBUG: Schedule added successfully');
+        return true;
       }
 
-      return success;
+      return false;
     } catch (e) {
       print('DEBUG: Error adding schedule: $e');
       return false;

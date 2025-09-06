@@ -108,6 +108,13 @@ class ShoppingListNotifier extends StateNotifier<ShoppingListState> {
       return null;
     }
 
+    // グループ数制限チェック（5件まで）
+    const maxGroups = 5;
+    if (state.groups.length >= maxGroups) {
+      state = state.copyWith(error: '買い物リストグループは最大${maxGroups}件まで作成できます');
+      return null;
+    }
+
     try {
       final groupId = await _infrastructure.createGroup(
         spaceId: currentSpace.id,

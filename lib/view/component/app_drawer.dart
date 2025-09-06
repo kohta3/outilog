@@ -8,9 +8,29 @@ import 'package:outi_log/view/space_add_screen.dart';
 import 'package:outi_log/view/settings_screen.dart';
 import 'package:outi_log/provider/auth_provider.dart';
 import 'package:outi_log/view/space_settings_screen.dart';
+import 'package:outi_log/services/admob_service.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
+
+  /// インタースティシャル広告を表示する関数
+  static Future<void> _showInterstitialAd(BuildContext context) async {
+    try {
+      final admobService = AdMobService();
+
+      await admobService.loadInterstitialAd(
+        onAdLoaded: (InterstitialAd ad) {
+          ad.show();
+        },
+        onAdFailedToLoad: (LoadAdError error) {
+          print('インタースティシャル広告の読み込みに失敗: $error');
+        },
+      );
+    } catch (e) {
+      print('インタースティシャル広告の表示中にエラー: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,7 +115,10 @@ class AppDrawer extends ConsumerWidget {
                 : const Text('最初のスペースを作成'),
             enabled: canCreateSpace,
             onTap: canCreateSpace
-                ? () {
+                ? () async {
+                    // インタースティシャル広告を表示
+                    await _showInterstitialAd(context);
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -200,7 +223,10 @@ class AppDrawer extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('設定'),
-            onTap: () {
+            onTap: () async {
+              // インタースティシャル広告を表示
+              await _showInterstitialAd(context);
+
               Navigator.push(
                 context,
                 MaterialPageRoute(

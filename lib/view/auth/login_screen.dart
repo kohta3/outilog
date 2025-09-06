@@ -11,6 +11,8 @@ import 'package:outi_log/utils/validate.dart';
 import 'package:outi_log/view/auth/create_account_screen.dart';
 import 'package:outi_log/view/auth/forgot_password_screen.dart';
 import 'package:outi_log/view/component/common.dart';
+import 'package:outi_log/services/analytics_service.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -36,7 +38,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
       UserFirestoreInfrastructure(),
       StorageInfrastructure(),
+      RemoteNotificationService(),
     );
+
+    // ログイン画面の表示を記録
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AnalyticsService().logScreenView(screenName: 'login');
+    });
   }
 
   @override
@@ -61,17 +69,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         isLoading = true;
       });
 
-      await _authController.signIn(
-        email: _emailController.text,
-        password: _passwordController.text,
-        context: context,
-        ref: ref,
-      );
+      try {
+        await _authController.signIn(
+          email: _emailController.text,
+          password: _passwordController.text,
+          context: context,
+          ref: ref,
+        );
 
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+
+          // ログイン成功時にAnalyticsイベントを記録
+          AnalyticsService().logLogin(loginMethod: 'email');
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
   }

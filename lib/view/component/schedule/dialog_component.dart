@@ -11,6 +11,7 @@ import 'package:outi_log/infrastructure/space_infrastructure.dart';
 import 'package:outi_log/utils/format.dart';
 import 'package:outi_log/utils/schedule_util.dart' as schedule_util;
 import 'package:outi_log/view/component/common.dart';
+import 'package:outi_log/services/analytics_service.dart';
 
 // スペースの参加ユーザーを取得するプロバイダー
 final spaceParticipantsProvider =
@@ -745,6 +746,13 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                     }
 
                     if (success) {
+                      // スケジュール作成成功時にAnalyticsイベントを記録
+                      if (widget.initialSchedule == null) {
+                        AnalyticsService().logScheduleCreate(
+                          eventType: isAllDay ? 'all_day' : 'timed',
+                        );
+                      }
+
                       // 通知をスケジュール
                       final notificationService =
                           ref.read(notificationServiceProvider);

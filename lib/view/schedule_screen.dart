@@ -12,6 +12,7 @@ import 'package:outi_log/models/schedule_model.dart';
 import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/view/component/schedule/dialog_component.dart';
 import 'package:outi_log/view/component/schedule/timeline_schedule_view.dart';
+import 'package:outi_log/view/component/advertisement/native_ad_widget.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key});
@@ -339,21 +340,39 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           );
         }
 
-        return ListView.builder(
+        // ネイティブ広告を挿入するためのリストを作成
+        List<Widget> widgets = [];
+        int scheduleIndex = 0;
+
+        // Firestoreスケジュールを追加し、4スケジュールごとにネイティブ広告を挿入
+        for (int i = 0; i < firestoreSchedules.length; i++) {
+          widgets.add(_buildFirestoreScheduleCard(firestoreSchedules[i]));
+          scheduleIndex++;
+
+          // 4スケジュールごとにネイティブ広告を挿入
+          if (scheduleIndex % 4 == 0) {
+            widgets.add(const ListNativeAdWidget(
+              margin: EdgeInsets.symmetric(vertical: 8),
+            ));
+          }
+        }
+
+        // ローカルイベントを追加
+        for (int i = 0; i < localEvents.length; i++) {
+          widgets.add(_buildLocalEventCard(localEvents[i]));
+          scheduleIndex++;
+
+          // 4スケジュールごとにネイティブ広告を挿入
+          if (scheduleIndex % 4 == 0) {
+            widgets.add(const ListNativeAdWidget(
+              margin: EdgeInsets.symmetric(vertical: 8),
+            ));
+          }
+        }
+
+        return ListView(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          itemCount: totalEvents,
-          itemBuilder: (context, index) {
-            // Firestoreスケジュールを先に表示
-            if (index < firestoreSchedules.length) {
-              final schedule = firestoreSchedules[index];
-              return _buildFirestoreScheduleCard(schedule);
-            } else {
-              // ローカルイベントを表示
-              final localIndex = index - firestoreSchedules.length;
-              final event = localEvents[localIndex];
-              return _buildLocalEventCard(event);
-            }
-          },
+          children: widgets,
         );
       },
     );
@@ -433,9 +452,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     .deleteSchedule(schedule.id!);
                 if (success) {
                   // スケジュール削除時に通知もキャンセル
-                  final notificationService = ref.read(notificationServiceProvider);
-                  await notificationService.cancelAllNotificationsForSchedule(schedule.id!);
-                  
+                  final notificationService =
+                      ref.read(notificationServiceProvider);
+                  await notificationService
+                      .cancelAllNotificationsForSchedule(schedule.id!);
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('予定を削除しました'),

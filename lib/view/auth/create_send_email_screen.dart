@@ -7,6 +7,7 @@ import 'package:outi_log/infrastructure/user_firestore_infrastructure.dart';
 import 'package:outi_log/infrastructure/storage_infrastructure.dart';
 import 'package:outi_log/provider/flutter_secure_storage_provider.dart';
 import 'package:outi_log/repository/login_repo.dart';
+import 'package:outi_log/services/remote_notification_service.dart';
 
 class CreateSendEmailScreen extends ConsumerStatefulWidget {
   const CreateSendEmailScreen({super.key});
@@ -29,6 +30,7 @@ class _CreateSendEmailScreenState extends ConsumerState<CreateSendEmailScreen> {
       LoginRepo(ref.read(flutterSecureStorageControllerProvider.notifier)),
       UserFirestoreInfrastructure(),
       StorageInfrastructure(),
+      RemoteNotificationService(),
     );
   }
 
