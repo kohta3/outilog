@@ -11,6 +11,9 @@ import 'package:outi_log/provider/space_prodiver.dart';
 import 'package:outi_log/provider/notification_service_provider.dart';
 import 'package:outi_log/repository/login_repo.dart';
 import 'package:outi_log/services/remote_notification_service.dart';
+import 'package:outi_log/view/privacy_policy_screen.dart';
+import 'package:outi_log/view/terms_of_service_screen.dart';
+import 'package:outi_log/view/help_support_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -229,14 +232,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.security),
             title: const Text('プライバシーポリシー'),
             onTap: () {
-              // TODO: プライバシーポリシー画面に移動
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyPolicyScreen(),
+                ),
+              );
             },
           ),
           ListTile(
             leading: const Icon(Icons.description),
             title: const Text('利用規約'),
             onTap: () {
-              // TODO: 利用規約画面に移動
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TermsOfServiceScreen(),
+                ),
+              );
             },
           ),
           const Divider(),
@@ -247,7 +260,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.help),
             title: const Text('ヘルプ・サポート'),
             onTap: () {
-              // TODO: ヘルプ画面に移動
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HelpSupportScreen(),
+                ),
+              );
             },
           ),
           ListTile(
@@ -255,7 +273,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('アプリについて'),
             subtitle: const Text('バージョン 1.0.0'),
             onTap: () {
-              // TODO: アプリ情報画面に移動
+              _showAppInfoDialog(context);
             },
           ),
           const Divider(),
@@ -313,6 +331,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.pop(context);
             },
             child: const Text('アップグレード'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAppInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('アプリについて'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'OutiLog',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: themeColor,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text('バージョン: 1.0.0'),
+            Text('リリース日: 2024年1月1日'),
+            SizedBox(height: 16),
+            Text(
+              '家族やルームメイトと共有する生活管理アプリです。\n'
+              'スケジュール、家計簿、買い物リストを一緒に管理できます。',
+              style: TextStyle(height: 1.5),
+            ),
+            SizedBox(height: 16),
+            Text(
+              '© 2024 OutiLog開発チーム\n'
+              'All rights reserved.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('閉じる'),
           ),
         ],
       ),

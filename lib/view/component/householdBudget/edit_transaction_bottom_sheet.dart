@@ -8,7 +8,7 @@ import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// カンマ区切り数値入力フォーマッター
+// カンマ区切り数値入力フォーマッター（9桁制限付き）
 class _NumberInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -20,6 +20,12 @@ class _NumberInputFormatter extends TextInputFormatter {
 
     if (digitsOnly.isEmpty) {
       return const TextEditingValue(text: '');
+    }
+
+    // 9桁制限をチェック
+    if (digitsOnly.length > 9) {
+      // 9桁を超える場合は前の値を返す
+      return oldValue;
     }
 
     // 数値に変換してカンマ区切りでフォーマット

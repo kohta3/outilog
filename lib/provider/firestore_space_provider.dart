@@ -238,6 +238,32 @@ class FirestoreSpacesNotifier extends StateNotifier<SpacesModel?> {
     }
   }
 
+  /// スペース名を更新
+  Future<bool> updateSpaceName({
+    required String spaceId,
+    required String newSpaceName,
+  }) async {
+    if (_userId == null) return false;
+
+    try {
+      final success = await _repo.updateSpaceName(
+        spaceId: spaceId,
+        newSpaceName: newSpaceName,
+        requesterId: _userId,
+      );
+
+      if (success) {
+        // 状態を更新
+        await initializeSpaces();
+      }
+
+      return success;
+    } catch (e) {
+      print('DEBUG: Error updating space name: $e');
+      return false;
+    }
+  }
+
   /// スペースを再読み込み
   Future<void> reloadSpaces() async {
     await initializeSpaces();

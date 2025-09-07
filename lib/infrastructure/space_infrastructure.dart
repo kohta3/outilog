@@ -498,4 +498,36 @@ class SpaceInfrastructure {
       throw Exception('ヘッダー画像の更新に失敗しました: $e');
     }
   }
+
+  /// スペース名を更新
+  Future<bool> updateSpaceName({
+    required String spaceId,
+    required String newSpaceName,
+    required String requesterId,
+  }) async {
+    try {
+      // 1. リクエスト者の権限チェック（オーナーのみがスペース名を変更可能）
+      final requesterParticipant = await _firestore
+          .collection(_participantsCollection)
+          .where('space_id', isEqualTo: spaceId)
+          .where('user_id', isEqualTo: requesterId)
+          .where('role', isEqualTo: 'owner')
+          .where('is_active', isEqualTo: true)
+          .get();
+
+      if (requesterParticipant.docs.isEmpty) {
+        throw Exception('スペース名を変更する権限がありません（オーナーのみ変更可能）');
+      }
+
+      // 2. スペース名を更新
+      await _firestore.collection(_spacesCollection).doc(spaceId).update({
+        'space_name': newSpaceName,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+
+      return true;
+    } catch (e) {
+      throw Exception('スペース名の更新に失敗しました: $e');
+    }
+  }
 }

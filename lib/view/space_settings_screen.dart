@@ -178,15 +178,22 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
     }
 
     try {
-      // TODO: スペース名変更の実装
-      await Future.delayed(const Duration(seconds: 1)); // 仮の実装
+      // スペース名を更新
+      final success =
+          await ref.read(firestoreSpacesProvider.notifier).updateSpaceName(
+                spaceId: widget.space.id,
+                newSpaceName: newName,
+              );
 
-      setState(() {
-        _isEditingSpaceName = false;
-        // スペース名を更新
-      });
+      if (success) {
+        setState(() {
+          _isEditingSpaceName = false;
+        });
 
-      Toast.show(context, 'スペース名を変更しました');
+        Toast.show(context, 'スペース名を変更しました');
+      } else {
+        Toast.show(context, 'スペース名の変更に失敗しました');
+      }
     } catch (e) {
       Toast.show(context, 'スペース名の変更に失敗しました: $e');
     }

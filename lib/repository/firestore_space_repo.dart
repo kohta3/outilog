@@ -270,6 +270,33 @@ class FirestoreSpaceRepo {
     }
   }
 
+  /// スペース名を更新
+  Future<bool> updateSpaceName({
+    required String spaceId,
+    required String newSpaceName,
+    required String requesterId,
+  }) async {
+    try {
+      debugPrint('DEBUG: Updating space name: $spaceId to $newSpaceName');
+
+      final success = await _spaceInfrastructure.updateSpaceName(
+        spaceId: spaceId,
+        newSpaceName: newSpaceName,
+        requesterId: requesterId,
+      );
+
+      if (success) {
+        // キャッシュをクリア（スペース情報が変更されたため）
+        await _clearSpacesCache();
+      }
+
+      return success;
+    } catch (e) {
+      debugPrint('DEBUG: Error updating space name: $e');
+      return false;
+    }
+  }
+
   /// 全てのデータを削除（ログアウト時など）
   Future<void> deleteAllData() async {
     await _secureStorageController.deleteValue(key: _currentSpaceKey);
