@@ -9,6 +9,10 @@ String formatDate(DateTime dateTime) {
   return '${dateTime.year}/${dateTime.month}/${dateTime.day}';
 }
 
+String formatTime(DateTime dateTime) {
+  return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+}
+
 String formatMonth(DateTime dateTime) {
   return '${dateTime.year}/${dateTime.month}';
 }

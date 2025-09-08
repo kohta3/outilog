@@ -76,8 +76,26 @@ class _AddTransactionBottomSheetState
 
     // カテゴリーデータを読み込み
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(categoryProvider.notifier).loadCategories();
+      ref.read(categoryProvider.notifier).loadCategories().then((_) {
+        // カテゴリー読み込み後に初期分類を設定
+        _initializeInitialCategory();
+      });
     });
+  }
+
+  void _initializeInitialCategory() {
+    final categoryState = ref.read(categoryProvider);
+    if (widget.transactionType == '支出' &&
+        categoryState.expenseCategories.isNotEmpty) {
+      _selectedMainCategory = categoryState.expenseCategories.first.id;
+      // サブカテゴリーを読み込み
+      ref
+          .read(categoryProvider.notifier)
+          .loadSubCategories(_selectedMainCategory!);
+    } else if (widget.transactionType == '収入' &&
+        categoryState.incomeCategories.isNotEmpty) {
+      _selectedMainCategory = categoryState.incomeCategories.first.id;
+    }
   }
 
   Future<void> _saveTransaction() async {
@@ -267,6 +285,10 @@ class _AddTransactionBottomSheetState
                         _selectedMainCategory =
                             categoryState.expenseCategories.first.id;
                         _selectedSubCategory = null;
+                        // サブカテゴリーを読み込み
+                        ref
+                            .read(categoryProvider.notifier)
+                            .loadSubCategories(_selectedMainCategory!);
                       }
                     } else {
                       // 収入タブ
@@ -348,6 +370,12 @@ class _AddTransactionBottomSheetState
     return TextField(
       controller: _amountController,
       decoration: InputDecoration(
+        hintText: '1,000',
+        hintStyle: const TextStyle(
+          fontSize: 18,
+          color: secondaryTextColor,
+          fontWeight: FontWeight.bold,
+        ),
         prefix: const Text(
           '¥ ',
           style: TextStyle(
@@ -425,7 +453,7 @@ class _AddTransactionBottomSheetState
             _selectedMainCategory = newValue;
             _selectedSubCategory = null; // 分類変更時はカテゴリーをリセット
           });
-          // サブカテゴリーを読み込み
+          // サブカテゴリーを読み込み（支出タブの場合のみ）
           if (newValue != null && _tabController.index == 0) {
             ref.read(categoryProvider.notifier).loadSubCategories(newValue);
           }

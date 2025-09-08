@@ -176,10 +176,6 @@ class RemoteNotificationService {
         'retry_count': 0,
         'target_platform': 'all', // Android/iOS両方に対応
       });
-
-      print('FCM: 通知をキューに追加しました: $token');
-      print(
-          'FCM: 通知内容 - タイトル: ${notificationData['title']}, 本文: ${notificationData['body']}');
     } catch (e) {
       print('FCM: 通知送信エラー: $e');
 

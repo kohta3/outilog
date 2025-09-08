@@ -184,31 +184,87 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
     }
   }
 
-  void _showDateTimePicker() {
-    schedule_util.showDateTimePicker(context, startDateTime, (date) {
+  void _showStartDatePicker() {
+    schedule_util.showDatePicker(context, startDateTime, (date) {
       setState(() {
-        startDateTime = date;
+        // 開始日時を選択した日付の現在の時刻に設定
+        startDateTime = DateTime(date.year, date.month, date.day,
+            startDateTime.hour, startDateTime.minute);
+        // 終了日時が開始日時より前になった場合は調整
+        if (endDateTime.isBefore(startDateTime)) {
+          endDateTime = startDateTime.add(Duration(hours: 1));
+        }
       });
     }, (date) {
       setState(() {
-        startDateTime = date;
+        startDateTime = DateTime(date.year, date.month, date.day,
+            startDateTime.hour, startDateTime.minute);
+        if (endDateTime.isBefore(startDateTime)) {
+          endDateTime = startDateTime.add(Duration(hours: 1));
+        }
       });
     });
   }
 
-  void _showEndDateTimePicker() {
-    schedule_util.showDateTimePicker(context, endDateTime, (date) {
+  void _showStartTimePicker() {
+    showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(startDateTime),
+    ).then((time) {
+      if (time != null) {
+        setState(() {
+          startDateTime = DateTime(startDateTime.year, startDateTime.month,
+              startDateTime.day, time.hour, time.minute);
+          // 終了日時が開始日時より前になった場合は調整
+          if (endDateTime.isBefore(startDateTime)) {
+            endDateTime = startDateTime.add(Duration(hours: 1));
+          }
+        });
+      }
+    });
+  }
+
+  void _showEndDatePicker() {
+    schedule_util.showDatePicker(context, endDateTime, (date) {
       setState(() {
-        endDateTime = date;
+        // 終了日時を選択した日付の現在の時刻に設定
+        endDateTime = DateTime(date.year, date.month, date.day,
+            endDateTime.hour, endDateTime.minute);
+        // 終了日時が開始日時より前になった場合は調整
+        if (endDateTime.isBefore(startDateTime)) {
+          endDateTime = startDateTime.add(Duration(hours: 1));
+        }
       });
     }, (date) {
       setState(() {
-        endDateTime = date;
+        endDateTime = DateTime(date.year, date.month, date.day,
+            endDateTime.hour, endDateTime.minute);
+        if (endDateTime.isBefore(startDateTime)) {
+          endDateTime = startDateTime.add(Duration(hours: 1));
+        }
       });
     });
   }
 
-  void _showDatePicker() {
+  void _showEndTimePicker() {
+    showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(endDateTime),
+    ).then((time) {
+      if (time != null) {
+        setState(() {
+          endDateTime = DateTime(endDateTime.year, endDateTime.month,
+              endDateTime.day, time.hour, time.minute);
+          // 終了日時が開始日時より前になった場合は調整
+          if (endDateTime.isBefore(startDateTime)) {
+            endDateTime = startDateTime.add(Duration(hours: 1));
+          }
+        });
+      }
+    });
+  }
+
+  void _showAllDayDatePicker() {
     schedule_util.showDatePicker(context, startDateTime, (date) {
       setState(() {
         // 開始日時を選択した日付の00:00に設定
@@ -226,7 +282,7 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
     });
   }
 
-  void _showEndDatePicker() {
+  void _showAllDayEndDatePicker() {
     schedule_util.showDatePicker(context, endDateTime, (date) {
       setState(() {
         // 終了日時を選択した日付の23:59に設定
@@ -368,11 +424,25 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                                 selectedDate.month, selectedDate.day, 23, 59);
                           }
                         } else {
-                          // 終日がオフになった場合、現在の日付の現在時刻から1時間後に設定
-                          final now = DateTime.now();
-                          startDateTime = DateTime(now.year, now.month, now.day,
-                              now.hour, now.minute);
-                          endDateTime = startDateTime.add(Duration(hours: 1));
+                          // 終日がオフになった場合、選択された日付を保持しつつ適切な時間を設定
+                          if (widget.selectedDate != null) {
+                            final selectedDate = widget.selectedDate!;
+                            final now = DateTime.now();
+                            // 選択された日付の現在時刻から1時間後に設定
+                            startDateTime = DateTime(
+                                selectedDate.year,
+                                selectedDate.month,
+                                selectedDate.day,
+                                now.hour,
+                                now.minute);
+                            endDateTime = startDateTime.add(Duration(hours: 1));
+                          } else {
+                            // 日付が選択されていない場合は現在の日付の現在時刻から1時間後に設定
+                            final now = DateTime.now();
+                            startDateTime = DateTime(now.year, now.month,
+                                now.day, now.hour, now.minute);
+                            endDateTime = startDateTime.add(Duration(hours: 1));
+                          }
                         }
                       });
                     },
@@ -381,28 +451,164 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                 ],
               ),
               SizedBox(height: 8),
-              Row(
-                children: [
-                  sizedIconBox(Icons.calendar_month),
-                  expandedOutlinedButton(
-                      isAllDay
-                          ? formatDate(startDateTime)
-                          : formatDateTime(startDateTime),
-                      4, () async {
-                    isAllDay ? _showDatePicker() : _showDateTimePicker();
-                  }),
-                  Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text("~")),
-                  expandedOutlinedButton(
-                      isAllDay
-                          ? formatDate(endDateTime)
-                          : formatDateTime(endDateTime),
-                      4, () async {
-                    isAllDay ? _showEndDatePicker() : _showEndDateTimePicker();
-                  }),
-                ],
-              ),
+              // 終日の場合は日付のみ、そうでなければ日付と時間を分離
+              if (isAllDay) ...[
+                // 終日の場合：日付のみ
+                Row(
+                  children: [
+                    sizedIconBox(Icons.calendar_month),
+                    expandedOutlinedButton(formatDate(startDateTime), 4,
+                        () async {
+                      _showAllDayDatePicker();
+                    }),
+                    Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text("~")),
+                    expandedOutlinedButton(formatDate(endDateTime), 4,
+                        () async {
+                      _showAllDayEndDatePicker();
+                    }),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    sizedIconBox(Icons.calendar_month),
+                    Expanded(
+                      child: Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: Icon(Icons.calendar_today, size: 16),
+                                    label: Text(
+                                      formatDate(startDateTime),
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 12),
+                                      side:
+                                          BorderSide(color: Colors.grey[400]!),
+                                    ),
+                                    onPressed: () async {
+                                      _showStartDatePicker();
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: Icon(Icons.access_time, size: 16),
+                                    label: Text(
+                                      formatTime(startDateTime),
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 12),
+                                      side:
+                                          BorderSide(color: Colors.grey[400]!),
+                                    ),
+                                    onPressed: () async {
+                                      _showStartTimePicker();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    // 終了日時（右側）
+                    Expanded(
+                      child: Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: Icon(Icons.calendar_today, size: 16),
+                                    label: Text(
+                                      formatDate(endDateTime),
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 12),
+                                      side:
+                                          BorderSide(color: Colors.grey[400]!),
+                                    ),
+                                    onPressed: () async {
+                                      _showEndDatePicker();
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: Icon(Icons.access_time, size: 16),
+                                    label: Text(
+                                      formatTime(endDateTime),
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 12),
+                                      side:
+                                          BorderSide(color: Colors.grey[400]!),
+                                    ),
+                                    onPressed: () async {
+                                      _showEndTimePicker();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               SizedBox(height: 8),
               Row(
                 children: [
@@ -663,6 +869,17 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('タイトルを入力してください'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  // 終了日時が開始日時より前でないかチェック
+                  if (endDateTime.isBefore(startDateTime)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('終了日時は開始日時より後に設定してください'),
                         backgroundColor: Colors.red,
                       ),
                     );

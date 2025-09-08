@@ -369,7 +369,6 @@ class AuthController {
               leading: const Icon(Icons.camera_alt),
               title: const Text('カメラで撮影'),
               onTap: () async {
-                Navigator.pop(context);
                 final image = await _storageInfrastructure.takePhoto();
                 if (context.mounted) {
                   Navigator.pop(context, image);
@@ -380,7 +379,6 @@ class AuthController {
               leading: const Icon(Icons.photo_library),
               title: const Text('ギャラリーから選択'),
               onTap: () async {
-                Navigator.pop(context);
                 final image = await _storageInfrastructure.selectFromGallery();
                 if (context.mounted) {
                   Navigator.pop(context, image);
