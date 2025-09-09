@@ -41,8 +41,15 @@ jobs:
 
       - name: Increment build number
         run: |
-          cd ios
-          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
+          # Get the latest build number from App Store Connect
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
+          NEW_BUILD=$((LATEST_BUILD + 1))
+          echo "Latest build number: $LATEST_BUILD"
+          echo "New build number: $NEW_BUILD"
+          
+          # Update pubspec.yaml with the new build number
+          sed -i '' "s/version: [0-9]\+\.[0-9]\+\.[0-9]\++[0-9]\+/version: 1.0.0+$NEW_BUILD/" pubspec.yaml
+          echo "Updated pubspec.yaml with build number: $NEW_BUILD"
 
       - name: Build ipa for distribution
         run: |
