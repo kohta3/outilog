@@ -20,18 +20,31 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    print('Firebase初期化エラー: $e');
+    // Firebase初期化に失敗した場合でもアプリを続行
+  }
 
   // Crashlyticsを初期化
   FlutterError.onError = (errorDetails) {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    try {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    } catch (e) {
+      print('Crashlyticsエラー記録失敗: $e');
+    }
   };
 
   // プラットフォームエラーをCrashlyticsに送信
   PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    try {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    } catch (e) {
+      print('Crashlyticsエラー記録失敗: $e');
+    }
     return true;
   };
 

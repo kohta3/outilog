@@ -59,10 +59,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyADxTxb-f4Dxbt7xnS78Wa4rRJ84x_RvCY',
-    appId: '1:525658721900:ios:731e497c0d6cb030cbd249',
+    appId: '1:525658721900:ios:a6be52e6bd27265ecbd249',
     messagingSenderId: '525658721900',
     projectId: 'outi-log',
     storageBucket: 'outi-log.firebasestorage.app',
-    iosBundleId: 'com.example.outiLog',
+    iosBundleId: 'com.prod.outiLog',
   );
 }

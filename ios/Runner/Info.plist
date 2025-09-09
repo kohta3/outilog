@@ -50,5 +50,16 @@
 	<array>
 		<string>canopenurl</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>このアプリは通知を送信するために通知の許可が必要です。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>このアプリは写真を撮影するためにカメラの許可が必要です。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>このアプリは写真を選択するためにフォトライブラリの許可が必要です。</string>
 </dict>
 </plist>
