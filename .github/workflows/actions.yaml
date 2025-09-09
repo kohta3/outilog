@@ -42,16 +42,11 @@ jobs:
       - name: Increment build number
         run: |
           cd ios
-          # Get the latest build number from App Store Connect and increment it
-          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo "0")
-          NEW_BUILD=$((LATEST_BUILD + 1))
-          echo "Latest build number: $LATEST_BUILD"
-          echo "New build number: $NEW_BUILD"
-          agvtool new-version -all $NEW_BUILD
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
 
       - name: Build ipa for distribution
         run: |
-          flutter build ipa --release --export-options-plist=$HOME/export_options.plist --build-number=$NEW_BUILD
+          flutter build ipa --release --export-options-plist=$HOME/export_options.plist
 
       - name: Publish the app to App Store Connect
         run: |
