@@ -62,6 +62,6 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>このアプリは写真を選択するためにフォトライブラリの許可が必要です。</string>
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-6529629959594411~1234567890</string>
+	<string>ca-app-pub-6529629959594411~2628276458</string>
 </dict>
 </plist>
