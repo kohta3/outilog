@@ -71,9 +71,9 @@ void main() async {
   final analyticsService = AnalyticsService();
   await analyticsService.initialize();
 
-  // AdMobサービスを初期化
-  final admobService = AdMobService();
-  await admobService.initialize();
+  // AdMobサービスを初期化（一時的に無効化）
+  // final admobService = AdMobService();
+  // await admobService.initialize();
 
   runApp(
     ProviderScope(
