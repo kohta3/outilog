@@ -9,14 +9,49 @@ class BarChartWidget extends StatelessWidget {
 
   final List<Map<String, String>> data;
 
+  // カテゴリーごとの合計を計算する関数
+  List<Map<String, dynamic>> _calculateCategoryTotals() {
+    Map<String, double> categoryTotals = {};
+    Map<String, String> categoryColors = {};
+
+    for (var item in data) {
+      String genre = item['genre'] ?? '';
+      double amount = double.tryParse(item['amount'] ?? '0') ?? 0;
+      String color = item['color'] ?? '';
+
+      if (genre.isNotEmpty) {
+        categoryTotals[genre] = (categoryTotals[genre] ?? 0) + amount;
+        if (color.isNotEmpty) {
+          categoryColors[genre] = color;
+        }
+      }
+    }
+
+    // 合計金額で降順ソート
+    var sortedEntries = categoryTotals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedEntries.map((entry) {
+      return {
+        'genre': entry.key,
+        'amount': entry.value,
+        'color': categoryColors[entry.key] ?? '',
+      };
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
+
+    // カテゴリーごとの合計を計算
+    List<Map<String, dynamic>> categoryData = _calculateCategoryTotals();
+
     // データから最大値を計算
     double maxAmount = 0;
-    if (data.isNotEmpty) {
-      maxAmount = data
-          .map((item) => double.tryParse(item['amount'] ?? '0') ?? 0)
+    if (categoryData.isNotEmpty) {
+      maxAmount = categoryData
+          .map((item) => item['amount'] as double)
           .reduce((a, b) => a > b ? a : b);
     }
 
@@ -36,7 +71,7 @@ class BarChartWidget extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                '収支の合計',
+                '今月の収支',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -62,7 +97,7 @@ class BarChartWidget extends StatelessWidget {
           ),
           child: Padding(
             padding: EdgeInsets.all(16),
-            child: data.isNotEmpty
+            child: categoryData.isNotEmpty
                 ? Row(
                     children: [
                       // 固定のY軸
@@ -94,8 +129,8 @@ class BarChartWidget extends StatelessWidget {
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: SizedBox(
-                            width: data.length > 4
-                                ? data.length * 80.0
+                            width: categoryData.length > 4
+                                ? categoryData.length * 80.0
                                 : width * 0.85 - 82,
                             height: 248,
                             child: BarChart(
@@ -109,7 +144,7 @@ class BarChartWidget extends StatelessWidget {
                                     getTooltipItem:
                                         (group, groupIndex, rod, rodIndex) {
                                       return BarTooltipItem(
-                                        '${data[group.x]['genre']}\n${formatCurrency(double.parse(data[group.x]['amount'] ?? '0'))}円',
+                                        '${categoryData[group.x]['genre']}\n${formatCurrency(categoryData[group.x]['amount'] as double)}円',
                                         TextStyle(
                                           color: Colors.black,
                                           fontWeight: FontWeight.w600,
@@ -132,11 +167,13 @@ class BarChartWidget extends StatelessWidget {
                                       reservedSize: 40,
                                       getTitlesWidget: (value, meta) {
                                         if (value.toInt() >= 0 &&
-                                            value.toInt() < data.length) {
+                                            value.toInt() <
+                                                categoryData.length) {
                                           return Padding(
                                             padding: EdgeInsets.only(top: 8),
                                             child: Text(
-                                              data[value.toInt()]['genre'] ??
+                                              categoryData[value.toInt()]
+                                                      ['genre'] ??
                                                   '',
                                               style: TextStyle(
                                                 fontSize: 11,
@@ -169,22 +206,19 @@ class BarChartWidget extends StatelessWidget {
                                     );
                                   },
                                 ),
-                                barGroups: data.asMap().entries.map((entry) {
+                                barGroups:
+                                    categoryData.asMap().entries.map((entry) {
                                   final index = entry.key;
                                   final item = entry.value;
-                                  final amount =
-                                      double.tryParse(item['amount'] ?? '0') ??
-                                          0;
-                                  final type = item['type'] ?? 'expense';
+                                  final amount = item['amount'] as double;
+                                  final genre = item['genre'] as String;
 
-                                  // 収入と支出で色を分ける
+                                  // カテゴリーの色を使用
                                   Color barColor;
-                                  if (type == 'income') {
-                                    barColor = Colors.green.withOpacity(0.8);
-                                  } else {
-                                    // カテゴリーの色を使用
-                                    final categoryColor =
-                                        item['color'] ?? '#2196F3';
+                                  final categoryColor =
+                                      item['color'] as String?;
+                                  if (categoryColor != null &&
+                                      categoryColor.isNotEmpty) {
                                     try {
                                       barColor = Color(int.parse(
                                               categoryColor.replaceFirst(
@@ -193,9 +227,11 @@ class BarChartWidget extends StatelessWidget {
                                           .withOpacity(0.8);
                                     } catch (e) {
                                       barColor =
-                                          getGenreColor(item['genre'] ?? '')
-                                              .withOpacity(0.8);
+                                          getGenreColor(genre).withOpacity(0.8);
                                     }
+                                  } else {
+                                    barColor =
+                                        getGenreColor(genre).withOpacity(0.8);
                                   }
 
                                   return BarChartGroupData(

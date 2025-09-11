@@ -8,7 +8,7 @@ class TransactionFirestoreInfrastructure {
   /// 取引を追加（支出・収入共通）
   Future<String> addTransaction({
     required String spaceId,
-    required String title,
+    required String title, // カテゴリー名をtitleとして使用
     required double amount,
     required String category,
     required String type, // 'income' or 'expense'
@@ -153,7 +153,7 @@ class TransactionFirestoreInfrastructure {
     required String transactionId,
     required String spaceId,
     required String userId,
-    String? title,
+    String? title, // カテゴリー名をtitleとして使用
     double? amount,
     String? category,
     String? type,

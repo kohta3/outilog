@@ -150,14 +150,13 @@ class _EditTransactionBottomSheetState
 
       // 元のデータから分類とカテゴリーを取得
       final originalGenre = widget.transactionData['genre'] ?? '';
-      final originalTitle = widget.transactionData['title'] ?? '';
       final transactionType = widget.transactionData['type'] ?? 'expense';
 
       await _transactionInfrastructure.updateTransaction(
         transactionId: transactionId,
         spaceId: currentSpace.id,
         userId: currentUser.uid,
-        title: originalTitle, // 元のタイトルを保持
+        title: originalGenre, // カテゴリー名をtitleとして使用
         amount: amount,
         category: originalGenre, // 元のカテゴリーを保持
         type: transactionType, // 元のタイプを保持
@@ -323,7 +322,6 @@ class _EditTransactionBottomSheetState
 
   Widget _buildCategoryDisplay() {
     final genre = widget.transactionData['genre'] ?? '';
-    final title = widget.transactionData['title'] ?? '';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -332,28 +330,13 @@ class _EditTransactionBottomSheetState
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey[300]!),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            genre,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: primaryTextColor,
-            ),
-          ),
-          if (title.isNotEmpty && title != genre) ...[
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ],
+      child: Text(
+        genre,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: primaryTextColor,
+        ),
       ),
     );
   }
@@ -371,7 +354,7 @@ class _EditTransactionBottomSheetState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '取引を編集',
+                '編集',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -380,7 +363,7 @@ class _EditTransactionBottomSheetState
               ),
               const SizedBox(height: 20),
               // 取引タイプを表示（読み取り専用）
-              _buildLabeledField('取引タイプ', _buildTransactionTypeDisplay()),
+              _buildLabeledField('タイプ', _buildTransactionTypeDisplay()),
               const SizedBox(height: 16),
               _buildLabeledField('金額', _buildAmountField()),
               const SizedBox(height: 16),

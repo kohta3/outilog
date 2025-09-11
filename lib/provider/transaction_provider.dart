@@ -57,7 +57,6 @@ class TransactionNotifier extends ChangeNotifier {
     _transactions = [
       Transaction(
         id: '1',
-        title: 'スーパーで買い物',
         amount: 3500,
         category: '食費',
         subCategory: '食料品',
@@ -67,7 +66,6 @@ class TransactionNotifier extends ChangeNotifier {
       ),
       Transaction(
         id: '2',
-        title: '給料',
         amount: 250000,
         category: '収入',
         subCategory: '給与',
@@ -77,7 +75,6 @@ class TransactionNotifier extends ChangeNotifier {
       ),
       Transaction(
         id: '3',
-        title: '電車賃',
         amount: 280,
         category: '交通費',
         subCategory: '電車・バス',
@@ -86,7 +83,6 @@ class TransactionNotifier extends ChangeNotifier {
       ),
       Transaction(
         id: '4',
-        title: '外食',
         amount: 1200,
         category: '食費',
         subCategory: '外食',
@@ -96,7 +92,6 @@ class TransactionNotifier extends ChangeNotifier {
       ),
       Transaction(
         id: '5',
-        title: '映画鑑賞',
         amount: 1800,
         category: '趣味・娯楽',
         subCategory: '映画',
@@ -105,7 +100,6 @@ class TransactionNotifier extends ChangeNotifier {
       ),
       Transaction(
         id: '6',
-        title: '副業収入',
         amount: 15000,
         category: '収入',
         subCategory: '副業',
@@ -115,7 +109,6 @@ class TransactionNotifier extends ChangeNotifier {
       ),
       Transaction(
         id: '7',
-        title: '電気代',
         amount: 8500,
         category: '水道・光熱費',
         subCategory: '電気',
@@ -124,7 +117,6 @@ class TransactionNotifier extends ChangeNotifier {
       ),
       Transaction(
         id: '8',
-        title: '本代',
         amount: 1500,
         category: '教育・学習',
         subCategory: '本',

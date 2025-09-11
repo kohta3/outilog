@@ -149,34 +149,22 @@ class _AddTransactionBottomSheetState
 
       // 分類名を取得
       String categoryName = '';
-      String title = '';
 
       if (_tabController.index == 0) {
         // 支出の場合
         final category = categoryState.expenseCategories
             .firstWhere((c) => c.id == _selectedMainCategory);
         categoryName = category.name;
-
-        if (_selectedSubCategory != null) {
-          final subCategories =
-              categoryState.subCategoriesByParent[_selectedMainCategory] ?? [];
-          final subCategory =
-              subCategories.firstWhere((sc) => sc.id == _selectedSubCategory);
-          title = '${category.name} - ${subCategory.name}';
-        } else {
-          title = category.name;
-        }
       } else {
         // 収入の場合
         final category = categoryState.incomeCategories
             .firstWhere((c) => c.id == _selectedMainCategory);
         categoryName = category.name;
-        title = category.name;
       }
 
       await _transactionInfrastructure.addTransaction(
         spaceId: currentSpace.id,
-        title: title,
+        title: categoryName, // カテゴリー名をtitleとして使用
         amount: amount,
         category: categoryName,
         type: transactionType,

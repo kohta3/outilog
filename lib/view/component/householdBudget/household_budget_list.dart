@@ -417,7 +417,6 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
     final genre = item['genre'] ?? '';
     final amount = double.tryParse(item['amount'] ?? '0') ?? 0;
     final type = item['type'] ?? 'expense';
-    final title = item['title'] ?? '';
     final storeName = item['storeName'] ?? '';
     final description = item['description'] ?? '';
 
@@ -495,7 +494,7 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        title.isNotEmpty ? title : (isIncome ? '収入' : genre),
+                        isIncome ? '収入' : genre,
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
