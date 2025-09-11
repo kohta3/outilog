@@ -1,22 +1,65 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class AdMobService {
   static final AdMobService _instance = AdMobService._internal();
   factory AdMobService() => _instance;
   AdMobService._internal();
 
-  // 広告ユニットID（テスト用と本番用を切り替え可能）
-  static String get _bannerAdUnitId => Platform.isAndroid
-      ? 'ca-app-pub-3940256099942544/9214589741' // テスト用バナー広告ID
-      // ? 'ca-app-pub-6529629959594411/1594396384' // 本番用バナー広告ID
-      : 'ca-app-pub-6529629959594411/1576454204'; // iOS用本番バナー広告ID
+  static bool? _isIPad;
+  static final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
 
-  static String get _interstitialAdUnitId => Platform.isAndroid
-      ? 'ca-app-pub-3940256099942544/1033173712' // テスト用インタースティシャル広告ID
-      // ? 'ca-app-pub-6529629959594411/7658646821' // 本番用インタースティシャル広告ID
-      : 'ca-app-pub-6529629959594411/1858120267'; // iOS用本番インタースティシャル広告ID
+  // デバイスタイプを判定するヘルパー関数
+  static Future<bool> _checkIsIPad() async {
+    if (_isIPad != null) return _isIPad!;
+
+    if (Platform.isIOS) {
+      try {
+        final iosInfo = await _deviceInfo.iosInfo;
+        _isIPad = iosInfo.model.toLowerCase().contains('ipad');
+        return _isIPad!;
+      } catch (e) {
+        print('Error detecting iPad: $e');
+        _isIPad = false;
+        return false;
+      }
+    }
+    _isIPad = false;
+    return false;
+  }
+
+  // 広告ユニットID（テスト用と本番用を切り替え可能）
+  static Future<String> get _bannerAdUnitId async {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/9214589741'; // テスト用バナー広告ID
+      // return 'ca-app-pub-6529629959594411/1594396384'; // 本番用バナー広告ID
+    } else if (Platform.isIOS) {
+      final isIPad = await _checkIsIPad();
+      if (isIPad) {
+        return 'ca-app-pub-6529629959594411/1576454204'; // iPad用バナー広告ID（iPhoneと同じ）
+      } else {
+        return 'ca-app-pub-6529629959594411/1576454204'; // iPhone用バナー広告ID
+      }
+    }
+    return 'ca-app-pub-3940256099942544/9214589741'; // デフォルト（テスト用）
+  }
+
+  static Future<String> get _interstitialAdUnitId async {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/1033173712'; // テスト用インタースティシャル広告ID
+      // return 'ca-app-pub-6529629959594411/7658646821'; // 本番用インタースティシャル広告ID
+    } else if (Platform.isIOS) {
+      final isIPad = await _checkIsIPad();
+      if (isIPad) {
+        return 'ca-app-pub-6529629959594411/1858120267'; // iPad用インタースティシャル広告ID（iPhoneと同じ）
+      } else {
+        return 'ca-app-pub-6529629959594411/1858120267'; // iPhone用インタースティシャル広告ID
+      }
+    }
+    return 'ca-app-pub-3940256099942544/1033173712'; // デフォルト（テスト用）
+  }
 
   // リワード広告ID（一時的に無効化）
   // static String get _rewardedAdUnitId => Platform.isAndroid
@@ -24,14 +67,34 @@ class AdMobService {
   //     ? 'ca-app-pub-6529629959594411/3935024237' // 本番用リワード広告ID
   //     : 'ca-app-pub-3940256099942544/5224354917'; // iOS用テストID
 
-  static String get _nativeAdUnitId => Platform.isAndroid
-      ? 'ca-app-pub-3940256099942544/2247696110' // テスト用ネイティブアドバンス広告ID
-      // ? 'ca-app-pub-6529629959594411/1211253000' // 本番用ネイティブアドバンス広告ID
-      : 'ca-app-pub-6529629959594411/8231956920'; // iOS用本番ネイティブアドバンス広告ID
+  static Future<String> get _nativeAdUnitId async {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/2247696110'; // テスト用ネイティブアドバンス広告ID
+      // return 'ca-app-pub-6529629959594411/1211253000'; // 本番用ネイティブアドバンス広告ID
+    } else if (Platform.isIOS) {
+      final isIPad = await _checkIsIPad();
+      if (isIPad) {
+        return 'ca-app-pub-6529629959594411/8231956920'; // iPad用ネイティブアドバンス広告ID（iPhoneと同じ）
+      } else {
+        return 'ca-app-pub-6529629959594411/8231956920'; // iPhone用ネイティブアドバンス広告ID
+      }
+    }
+    return 'ca-app-pub-3940256099942544/2247696110'; // デフォルト（テスト用）
+  }
 
-  static String get _appOpenAdUnitId => Platform.isAndroid
-      ? 'ca-app-pub-6529629959594411/7960494183' // 提供されたアプリ起動広告ID
-      : 'ca-app-pub-6529629959594411/3063390724'; // iOS用本番アプリ起動広告ID
+  static Future<String> get _appOpenAdUnitId async {
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-6529629959594411/7960494183'; // 提供されたアプリ起動広告ID
+    } else if (Platform.isIOS) {
+      final isIPad = await _checkIsIPad();
+      if (isIPad) {
+        return 'ca-app-pub-6529629959594411/3063390724'; // iPad用アプリ起動広告ID（iPhoneと同じ）
+      } else {
+        return 'ca-app-pub-6529629959594411/3063390724'; // iPhone用アプリ起動広告ID
+      }
+    }
+    return 'ca-app-pub-3940256099942544/3419835294'; // デフォルト（テスト用）
+  }
 
   BannerAd? _bannerAd;
   InterstitialAd? _interstitialAd;
@@ -59,8 +122,9 @@ class AdMobService {
     required void Function(LoadAdError) onAdFailedToLoad,
     required void Function(InterstitialAd) onAdLoaded,
   }) async {
+    final adUnitId = await _interstitialAdUnitId;
     await InterstitialAd.load(
-      adUnitId: _interstitialAdUnitId,
+      adUnitId: adUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: onAdLoaded,
@@ -101,8 +165,9 @@ class AdMobService {
     required void Function(Ad, LoadAdError) onAdFailedToLoad,
     required void Function(Ad) onAdLoaded,
   }) async {
+    final adUnitId = await _nativeAdUnitId;
     _nativeAd = NativeAd(
-      adUnitId: _nativeAdUnitId,
+      adUnitId: adUnitId,
       request: const AdRequest(),
       nativeTemplateStyle: NativeTemplateStyle(
         templateType: TemplateType.medium,
@@ -146,8 +211,9 @@ class AdMobService {
     required void Function(LoadAdError) onAdFailedToLoad,
     required void Function(AppOpenAd) onAdLoaded,
   }) async {
+    final adUnitId = await _appOpenAdUnitId;
     await AppOpenAd.load(
-      adUnitId: _appOpenAdUnitId,
+      adUnitId: adUnitId,
       request: const AdRequest(),
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (AppOpenAd ad) {
@@ -205,17 +271,17 @@ class AdMobService {
   bool get isInitialized => _isInitialized;
 
   /// バナー広告ユニットIDを取得
-  String get bannerAdUnitId => _bannerAdUnitId;
+  Future<String> get bannerAdUnitId => _bannerAdUnitId;
 
   /// インタースティシャル広告ユニットIDを取得
-  String get interstitialAdUnitId => _interstitialAdUnitId;
+  Future<String> get interstitialAdUnitId => _interstitialAdUnitId;
 
   // リワード広告ユニットIDを取得（一時的に無効化）
   // String get rewardedAdUnitId => _rewardedAdUnitId;
 
   /// ネイティブアドバンス広告ユニットIDを取得
-  String get nativeAdUnitId => _nativeAdUnitId;
+  Future<String> get nativeAdUnitId => _nativeAdUnitId;
 
   /// アプリ起動広告ユニットIDを取得
-  String get appOpenAdUnitId => _appOpenAdUnitId;
+  Future<String> get appOpenAdUnitId => _appOpenAdUnitId;
 }
