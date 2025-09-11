@@ -59,6 +59,7 @@ class _AddTransactionBottomSheetState
   late TabController _tabController;
   final _amountController = TextEditingController();
   final _memoController = TextEditingController();
+  final _storeNameController = TextEditingController();
   String? _selectedMainCategory;
   String? _selectedSubCategory;
   DateTime _selectedDate = DateTime.now();
@@ -182,6 +183,9 @@ class _AddTransactionBottomSheetState
         transactionDate: _selectedDate,
         createdBy: currentUser.uid,
         description: _memoController.text,
+        storeName: _storeNameController.text.isNotEmpty
+            ? _storeNameController.text
+            : null,
       );
 
       // Analyticsイベントを記録
@@ -245,6 +249,7 @@ class _AddTransactionBottomSheetState
     _tabController.dispose();
     _amountController.dispose();
     _memoController.dispose();
+    _storeNameController.dispose();
     super.dispose();
   }
 
@@ -310,6 +315,12 @@ class _AddTransactionBottomSheetState
               const SizedBox(height: 16),
               _buildLabeledField('メモ', _buildTextField(_memoController, 'メモ')),
               const SizedBox(height: 16),
+              // 支出の場合のみ店舗名を表示
+              if (_tabController.index == 0) ...[
+                _buildLabeledField(
+                    '店舗名', _buildTextField(_storeNameController, '店舗名（任意）')),
+                const SizedBox(height: 16),
+              ],
               _buildLabeledField('分類', _buildMainCategoryDropdown()),
               const SizedBox(height: 16),
               // 支出の場合のみカテゴリーを表示

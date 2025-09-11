@@ -58,6 +58,7 @@ class _EditTransactionBottomSheetState
     extends ConsumerState<EditTransactionBottomSheet> {
   final _amountController = TextEditingController();
   final _memoController = TextEditingController();
+  final _storeNameController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
 
@@ -85,6 +86,9 @@ class _EditTransactionBottomSheetState
     // メモを設定（descriptionカラムから取得）
     _memoController.text = data['description'] ?? '';
 
+    // 店舗名を設定
+    _storeNameController.text = data['storeName'] ?? '';
+
     // 日付を設定
     final dateString = data['date'] ?? '';
     if (dateString.isNotEmpty) {
@@ -100,6 +104,7 @@ class _EditTransactionBottomSheetState
   void dispose() {
     _amountController.dispose();
     _memoController.dispose();
+    _storeNameController.dispose();
     super.dispose();
   }
 
@@ -158,6 +163,9 @@ class _EditTransactionBottomSheetState
         type: transactionType, // 元のタイプを保持
         transactionDate: _selectedDate,
         description: _memoController.text, // メモをdescriptionとして保存
+        storeName: _storeNameController.text.isNotEmpty
+            ? _storeNameController.text
+            : null,
         receiptUrl: null, // レシートURLは更新しない
       );
 
@@ -378,6 +386,12 @@ class _EditTransactionBottomSheetState
               const SizedBox(height: 16),
               _buildLabeledField('メモ', _buildTextField(_memoController, 'メモ')),
               const SizedBox(height: 16),
+              // 支出の場合のみ店舗名を表示
+              if (widget.transactionData['type'] == 'expense') ...[
+                _buildLabeledField(
+                    '店舗名', _buildTextField(_storeNameController, '店舗名（任意）')),
+                const SizedBox(height: 16),
+              ],
               _buildLabeledField('分類', _buildCategoryDisplay()),
               const SizedBox(height: 16),
               _buildLabeledField('日付', _buildDateField()),

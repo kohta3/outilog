@@ -17,6 +17,7 @@ class TransactionFirestoreInfrastructure {
     String? description,
     String? receipt_url,
     String? color, // 色情報（16進数文字列）
+    String? storeName, // 店舗名（nullable）
   }) async {
     try {
       final transactionRef =
@@ -33,6 +34,7 @@ class TransactionFirestoreInfrastructure {
         'description': description ?? '',
         'receipt_url': receipt_url,
         'color': color, // 色情報を保存
+        'store_name': storeName, // 店舗名を保存
         'created_by': createdBy,
         'created_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
@@ -157,6 +159,7 @@ class TransactionFirestoreInfrastructure {
     String? type,
     DateTime? transactionDate,
     String? description,
+    String? storeName, // 店舗名を追加
     String? receiptUrl,
     String? color, // 色情報を追加
   }) async {
@@ -188,6 +191,7 @@ class TransactionFirestoreInfrastructure {
       if (transactionDate != null)
         updateData['transaction_date'] = Timestamp.fromDate(transactionDate);
       if (description != null) updateData['description'] = description;
+      if (storeName != null) updateData['store_name'] = storeName;
       if (receiptUrl != null) updateData['receipt_url'] = receiptUrl;
       if (color != null) updateData['color'] = color;
 

@@ -98,6 +98,7 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
             'date': transactionDate.toIso8601String(),
             'title': transaction['title'] ?? '',
             'description': transaction['description'] ?? '', // メモ情報を追加
+            'storeName': transaction['store_name'] ?? '', // 店舗名を追加
             'color': categoryColor, // カテゴリーの色情報を追加
           });
         }

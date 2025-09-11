@@ -282,135 +282,328 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
 
                   // リスト表示
                   Expanded(
-                    child: ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: currentMonthData.length,
-                      itemBuilder: (context, index) {
-                        final item = currentMonthData[index];
-                        final genre = item['genre'] ?? '';
-                        final amount =
-                            double.tryParse(item['amount'] ?? '0') ?? 0;
-                        final type = item['type'] ?? 'expense';
-                        final dateString = item['date'] ?? '';
-                        final title = item['title'] ?? '';
-
-                        // 日付をパース
-                        DateTime? transactionDate;
-                        if (dateString.isNotEmpty) {
-                          try {
-                            transactionDate = DateTime.parse(dateString);
-                          } catch (e) {
-                            print('Error parsing date: $e');
-                          }
-                        }
-
-                        // 収入と支出で表示を分ける
-                        final isIncome = type == 'income';
-                        final displayAmount = isIncome
-                            ? '+${formatCurrency(amount)}円'
-                            : '-${formatCurrency(amount)}円';
-                        final amountColor =
-                            isIncome ? Colors.green[600] : Colors.red[600];
-
-                        // カテゴリーの色を使用
-                        Color displayColor;
-                        if (isIncome) {
-                          displayColor = Colors.green;
-                        } else {
-                          final categoryColor = item['color'] ?? '#2196F3';
-                          try {
-                            displayColor = Color(int.parse(
-                                categoryColor.replaceFirst('#', ''),
-                                radix: 16));
-                          } catch (e) {
-                            displayColor = getGenreColor(genre);
-                          }
-                        }
-
-                        final iconColor = displayColor;
-                        final backgroundColor = displayColor.withOpacity(0.1);
-                        final icon =
-                            isIncome ? Icons.trending_up : getGenreIcon(genre);
-
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ListTile(
-                            onTap: () => _showTransactionOptions(context, item),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            leading: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: backgroundColor,
-                              ),
-                              child: Icon(
-                                icon,
-                                color: iconColor,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              title.isNotEmpty
-                                  ? title
-                                  : (isIncome ? '収入' : genre),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[800],
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isIncome ? '収入' : genre,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  transactionDate != null
-                                      ? '${transactionDate.month}/${transactionDate.day}'
-                                      : '${formatMonthJp(_currentDate)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            trailing: Text(
-                              displayAmount,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: amountColor,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                    child: _buildGroupedTransactionList(currentMonthData),
                   ),
                 ],
               );
+  }
+
+  Widget _buildGroupedTransactionList(List<Map<String, String>> transactions) {
+    // 日付ごとにグループ化
+    Map<String, List<Map<String, String>>> groupedTransactions = {};
+
+    for (final transaction in transactions) {
+      final dateString = transaction['date'] ?? '';
+      DateTime? transactionDate;
+
+      if (dateString.isNotEmpty) {
+        try {
+          transactionDate = DateTime.parse(dateString);
+        } catch (e) {
+          print('Error parsing date: $e');
+          continue;
+        }
+      } else {
+        continue;
+      }
+
+      final dateKey =
+          '${transactionDate.year}年${transactionDate.month}月${transactionDate.day}日';
+
+      if (!groupedTransactions.containsKey(dateKey)) {
+        groupedTransactions[dateKey] = [];
+      }
+      groupedTransactions[dateKey]!.add(transaction);
+    }
+
+    // 日付順でソート
+    final sortedDates = groupedTransactions.keys.toList()
+      ..sort((a, b) {
+        final dateA = _parseDateFromKey(a);
+        final dateB = _parseDateFromKey(b);
+        return dateB.compareTo(dateA); // 新しい日付が上に来るように
+      });
+
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      itemCount: sortedDates.length * 2, // 日付ヘッダー + 取引リスト
+      itemBuilder: (context, index) {
+        if (index % 2 == 0) {
+          // 日付ヘッダー
+          final dateIndex = index ~/ 2;
+          final dateKey = sortedDates[dateIndex];
+          return _buildDateHeader(dateKey);
+        } else {
+          // 取引リスト
+          final dateIndex = (index - 1) ~/ 2;
+          final dateKey = sortedDates[dateIndex];
+          final dayTransactions = groupedTransactions[dateKey]!;
+
+          return Column(
+            children: dayTransactions
+                .map((transaction) => _buildTransactionItem(transaction))
+                .toList(),
+          );
+        }
+      },
+    );
+  }
+
+  DateTime _parseDateFromKey(String dateKey) {
+    // "20xx年xx月xx日" から DateTime を解析
+    final regex = RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日');
+    final match = regex.firstMatch(dateKey);
+
+    if (match != null) {
+      final year = int.parse(match.group(1)!);
+      final month = int.parse(match.group(2)!);
+      final day = int.parse(match.group(3)!);
+      return DateTime(year, month, day);
+    }
+
+    return DateTime.now();
+  }
+
+  Widget _buildDateHeader(String dateKey) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.purple[50]!, Colors.pink[50]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.purple.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  color: Colors.purple[400],
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  dateKey,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple[700],
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(Map<String, String> item) {
+    final genre = item['genre'] ?? '';
+    final amount = double.tryParse(item['amount'] ?? '0') ?? 0;
+    final type = item['type'] ?? 'expense';
+    final title = item['title'] ?? '';
+    final storeName = item['storeName'] ?? '';
+    final description = item['description'] ?? '';
+
+    // 収入と支出で表示を分ける
+    final isIncome = type == 'income';
+    final displayAmount = isIncome
+        ? '+${formatCurrency(amount)}円'
+        : '-${formatCurrency(amount)}円';
+    final amountColor = isIncome ? Colors.green[600]! : Colors.red[600]!;
+
+    // カテゴリーの色を使用
+    Color displayColor;
+    if (isIncome) {
+      displayColor = Colors.green;
+    } else {
+      final categoryColor = item['color'] ?? '#2196F3';
+      try {
+        displayColor =
+            Color(int.parse(categoryColor.replaceFirst('#', ''), radix: 16));
+      } catch (e) {
+        displayColor = getGenreColor(genre);
+      }
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: displayColor.withOpacity(0.1),
+            blurRadius: 20,
+            offset: Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: displayColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showTransactionOptions(context, item),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // カテゴリー名と金額
+                Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: displayColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: displayColor.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        title.isNotEmpty ? title : (isIncome ? '収入' : genre),
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: amountColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: amountColor.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        displayAmount,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: amountColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // 店舗名
+                if (storeName.isNotEmpty) ...[
+                  SizedBox(height: 12),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.store,
+                          size: 16,
+                          color: Colors.orange[600],
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          storeName,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.orange[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // メモ
+                if (description.isNotEmpty) ...[
+                  SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.note_alt_outlined,
+                          size: 16,
+                          color: Colors.grey[500],
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
