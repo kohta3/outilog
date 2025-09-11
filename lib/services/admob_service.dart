@@ -11,14 +11,12 @@ class AdMobService {
   static String get _bannerAdUnitId => Platform.isAndroid
       ? 'ca-app-pub-3940256099942544/9214589741' // テスト用バナー広告ID
       // ? 'ca-app-pub-6529629959594411/1594396384' // 本番用バナー広告ID
-      // : 'ca-app-pub-6529629959594411/1576454204'; // iOS用本番バナー広告ID
-      : 'ca-app-pub-3940256099942544/2934735716'; // iOS用テストバナー広告ID
+      : 'ca-app-pub-6529629959594411/1576454204'; // iOS用本番バナー広告ID
 
   static String get _interstitialAdUnitId => Platform.isAndroid
       ? 'ca-app-pub-3940256099942544/1033173712' // テスト用インタースティシャル広告ID
       // ? 'ca-app-pub-6529629959594411/7658646821' // 本番用インタースティシャル広告ID
-      // : 'ca-app-pub-6529629959594411/1858120267'; // iOS用本番インタースティシャル広告ID
-      : 'ca-app-pub-3940256099942544/4411468910'; // iOS用テストインタースティシャル広告ID
+      : 'ca-app-pub-6529629959594411/1858120267'; // iOS用本番インタースティシャル広告ID
 
   // リワード広告ID（一時的に無効化）
   // static String get _rewardedAdUnitId => Platform.isAndroid
