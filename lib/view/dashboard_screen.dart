@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:outi_log/constant/color.dart';
@@ -128,105 +127,200 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ヘッダー画像セクション
-          _buildHeaderImageSection(currentSpace),
-          const SizedBox(height: 24),
-
-          // 今日の予定セクション
-          _buildTodayScheduleSection(ref),
-          const SizedBox(height: 24),
-
-          // ネイティブ広告を追加
-          const ListNativeAdWidget(
-            margin: EdgeInsets.symmetric(vertical: 8),
-          ),
-          const SizedBox(height: 16),
-
-          // 月間収支グラフセクション
-          _buildMonthlySummarySection(),
-        ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey[50]!,
+            Colors.white,
+          ],
+        ),
       ),
-    );
-  }
-
-  // 月間収支グラフセクション
-  Widget _buildMonthlySummarySection() {
-    final income = _monthlySummary['income'] ?? 0.0;
-    final expense = _monthlySummary['expense'] ?? 0.0;
-    final balance = _monthlySummary['balance'] ?? 0.0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.account_balance_wallet,
-              color: themeColor,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              '過去の収支',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            // ヘッダー画像セクション（AppBarと一体化）
+            _buildStylishHeaderSection(currentSpace),
+
+            // メインコンテンツ
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 今日の予定セクション
+                  _buildModernTodayScheduleSection(ref),
+                  const SizedBox(height: 24),
+
+                  // ネイティブ広告を追加
+                  const ListNativeAdWidget(
+                    margin: EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 月間収支グラフセクション
+                  _buildModernMonthlySummarySection(),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
+      ),
+    );
+  }
+
+  // モダンな月間収支グラフセクション
+  Widget _buildModernMonthlySummarySection() {
+    final income = _monthlySummary['income'] ?? 0.0;
+    final expense = _monthlySummary['expense'] ?? 0.0;
+    final balance = _monthlySummary['balance'] ?? 0.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 1,
           ),
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20.0),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.orange[50]!,
+              ],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 収支サマリー
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildSummaryItem('収入', income, Colors.green),
-                    _buildSummaryItem('支出', expense, Colors.red),
-                    _buildSummaryItem(
-                        '収支', balance, balance >= 0 ? Colors.blue : Colors.red),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.orange[400]!, Colors.orange[600]!],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        '6カ月間の収支',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                // 収支サマリー
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.grey[50]!,
+                        Colors.white,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[200]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildModernSummaryItem('収入', income, Colors.green),
+                      Container(
+                        width: 1,
+                        height: 60,
+                        color: Colors.grey[300],
+                      ),
+                      _buildModernSummaryItem('支出', expense, Colors.red),
+                      Container(
+                        width: 1,
+                        height: 60,
+                        color: Colors.grey[300],
+                      ),
+                      _buildModernSummaryItem('収支', balance,
+                          balance >= 0 ? Colors.blue : Colors.red),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
                 // 6カ月比較グラフ
-                _buildSixMonthChart(),
+                _buildModernSixMonthChart(),
               ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildSummaryItem(String label, double amount, Color color) {
+  Widget _buildModernSummaryItem(String label, double amount, Color color) {
     return Column(
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           '¥${formatCurrency(amount)}',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -235,15 +329,43 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildSixMonthChart() {
+  Widget _buildModernSixMonthChart() {
     if (_sixMonthData.isEmpty) {
-      return const Center(
-        child: Text(
-          'データがありません',
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 16,
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.grey[200]!,
+            width: 1,
           ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.bar_chart,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'データがありません',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '収支データを追加してみましょう',
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -468,23 +590,53 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  /// ヘッダー画像セクションを構築
-  Widget _buildHeaderImageSection(SpaceModel currentSpace) {
+  /// 時間に応じた挨拶を取得
+  String _getTimeBasedGreeting() {
+    final now = DateTime.now();
+    final hour = now.hour;
+
+    if (hour >= 5 && hour < 11) {
+      return 'おはようございます';
+    } else if (hour >= 11 && hour < 15) {
+      return 'こんにちは';
+    } else if (hour >= 15 && hour < 19) {
+      return 'お疲れ様です';
+    } else if (hour >= 19 && hour < 22) {
+      return 'こんばんは';
+    } else {
+      return 'おやすみなさい';
+    }
+  }
+
+  /// おしゃれなヘッダー画像セクションを構築（AppBarと一体化）
+  Widget _buildStylishHeaderSection(SpaceModel currentSpace) {
     return Container(
       width: double.infinity,
-      height: 200,
+      height: 220,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32.0),
+          bottomRight: Radius.circular(32.0),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: themeColor.withOpacity(0.4),
+            blurRadius: 25,
+            offset: const Offset(0, 10),
+            spreadRadius: 3,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32.0),
+          bottomRight: Radius.circular(32.0),
+        ),
         child: currentSpace.headerImageUrl != null &&
                 currentSpace.headerImageUrl!.isNotEmpty
             ? Stack(
@@ -496,269 +648,570 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     height: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return _buildDefaultHeader(currentSpace.spaceName);
+                      return _buildStylishDefaultHeader(currentSpace.spaceName);
                     },
                   ),
-                  // グラデーションオーバーレイ
+                  // グラデーションオーバーレイ（より美しいグラデーション）
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.2),
+                          Colors.black.withOpacity(0.6),
                         ],
+                        stops: const [0.0, 0.6, 1.0],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
                     ),
                   ),
-                  // スペース名
+                  // 装飾的な要素
                   Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: Text(
-                      currentSpace.spaceName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            offset: Offset(1, 1),
-                            blurRadius: 3,
-                            color: Colors.black54,
-                          ),
-                        ],
+                    top: 20,
+                    right: 20,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 2,
+                        ),
                       ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 40,
+                    right: 40,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  // メインコンテンツ
+                  Positioned(
+                    bottom: 30,
+                    left: 24,
+                    right: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 挨拶とアイコン
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.white.withOpacity(0.25),
+                                    Colors.white.withOpacity(0.15),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.home,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _getTimeBasedGreeting(),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    currentSpace.spaceName,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(
+                                          offset: Offset(2, 2),
+                                          blurRadius: 4,
+                                          color: Colors.black54,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        // 装飾的なライン
+                        Container(
+                          width: 60,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.8),
+                                Colors.white.withOpacity(0.4),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               )
-            : _buildDefaultHeader(currentSpace.spaceName),
+            : _buildStylishDefaultHeader(currentSpace.spaceName),
       ),
     );
   }
 
-  /// デフォルトヘッダーを構築
-  Widget _buildDefaultHeader(String spaceName) {
+  /// おしゃれなデフォルトヘッダーを構築
+  Widget _buildStylishDefaultHeader(String spaceName) {
     return Container(
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [themeColor, themeColor.withOpacity(0.8)],
+          colors: [
+            themeColor,
+            themeColor.withOpacity(0.9),
+            themeColor.withOpacity(0.7),
+            themeColor.withOpacity(0.5),
+          ],
+          stops: const [0.0, 0.3, 0.7, 1.0],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.home,
-              size: 48,
-              color: Colors.white.withOpacity(0.8),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              spaceName,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      child: Stack(
+        children: [
+          // 装飾的な円形要素
+          Positioned(
+            top: -60,
+            right: -60,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 2,
+                ),
               ),
             ),
-          ],
+          ),
+          Positioned(
+            top: -30,
+            right: -30,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -40,
+            left: -40,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          // メインコンテンツ
+          Positioned(
+            bottom: 30,
+            left: 24,
+            right: 24,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 挨拶とアイコン
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.25),
+                            Colors.white.withOpacity(0.15),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.home,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getTimeBasedGreeting(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            spaceName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(2, 2),
+                                  blurRadius: 4,
+                                  color: Colors.black54,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // 装飾的なライン
+                Container(
+                  width: 60,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.8),
+                        Colors.white.withOpacity(0.4),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // モダンな今日の予定セクション
+  Widget _buildModernTodayScheduleSection(WidgetRef ref) {
+    final todaySchedules =
+        ref.watch(scheduleFirestoreProvider.notifier).todaySchedules;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20.0),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.blue[50]!,
+              ],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.blue[400]!, Colors.blue[600]!],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '今日の予定',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${todaySchedules.length}件の予定',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                todaySchedules.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(40),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.grey[200]!,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.event_available,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '今日の予定はありません',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '新しい予定を追加してみましょう',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _buildModernTimelineView(todaySchedules),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  // 今日の予定セクション
-  Widget _buildTodayScheduleSection(WidgetRef ref) {
-    final todaySchedules =
-        ref.watch(scheduleFirestoreProvider.notifier).todaySchedules;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.calendar_today,
-              color: themeColor,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              '今日の予定',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(4.0),
-            child: todaySchedules.isEmpty
-                ? const Center(
-                    child: Text(
-                      '今日の予定はありません',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
-                    ),
-                  )
-                : _buildTimelineView(todaySchedules),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // タイムライン表示を構築（改善版）
-  Widget _buildTimelineView(List<dynamic> schedules) {
+  // モダンなタイムライン表示を構築
+  Widget _buildModernTimelineView(List<dynamic> schedules) {
     // 終日予定と時間指定予定を分ける
     final allDaySchedules = schedules.where((s) => s.isAllDay).toList();
     final timedSchedules = schedules.where((s) => !s.isAllDay).toList();
 
-    // 予定が多い場合はリスト表示も提供
-    final totalSchedules = allDaySchedules.length + timedSchedules.length;
-
     return Column(
       children: [
         if (allDaySchedules.isNotEmpty) ...[
-          _buildAllDaySection(allDaySchedules),
+          _buildModernAllDaySection(allDaySchedules),
+          const SizedBox(height: 16),
         ],
-        if (totalSchedules > 6) _buildViewToggleButtons(),
-        _buildTimedScheduleTable(timedSchedules),
+        if (timedSchedules.isNotEmpty) ...[
+          _buildTimelineScheduleSection(timedSchedules),
+        ],
       ],
     );
   }
 
-  // 表示切り替えボタンを構築
-  Widget _buildViewToggleButtons() {
+  // モダンな終日予定セクションを構築
+  Widget _buildModernAllDaySection(List<dynamic> allDaySchedules) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // タイムライン表示（現在の表示）
-                // 何もしない（既にタイムライン表示）
-              },
-              icon: const Icon(Icons.timeline, size: 16),
-              label: const Text('タイムライン'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[100],
-                foregroundColor: Colors.blue[700],
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+              spreadRadius: 1,
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () {
-                // リスト表示に切り替え（将来の実装）
-                // TODO: リスト表示の実装
-              },
-              icon: const Icon(Icons.list, size: 16),
-              label: const Text('リスト'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.grey[600],
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 終日予定セクションを構築
-  Widget _buildAllDaySection(List<dynamic> allDaySchedules) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue[200]!, width: 1),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.event_available,
-                color: Colors.blue[600],
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '終日予定',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue[600],
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${allDaySchedules.length}件',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ),
-            ],
+          ],
+          gradient: LinearGradient(
+            colors: [Colors.green[100]!, Colors.green[50]!],
           ),
         ),
-        const SizedBox(height: 12),
-        ...allDaySchedules
-            .map((schedule) => _buildEnhancedAllDayItem(schedule)),
-      ],
-    );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.purple[50]!, Colors.purple[100]!],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.purple[200]!, width: 1),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.purple[400],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.event_available,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '終日の予定',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple[700],
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.purple[200],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${allDaySchedules.length}件',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...allDaySchedules
+                .map((schedule) => _buildModernAllDayItem(schedule)),
+          ],
+        ));
   }
 
-  // 改善された終日予定アイテム
-  Widget _buildEnhancedAllDayItem(dynamic schedule) {
+  // モダンな終日予定アイテム
+  Widget _buildModernAllDayItem(dynamic schedule) {
     final title = schedule.title ?? 'タイトルなし';
-    final memo = schedule.memo ?? '';
     final color = _getScheduleColor(schedule);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            color.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: color.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+            spreadRadius: 0,
           ),
         ],
         border: Border.all(
@@ -767,72 +1220,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
             Container(
-              width: 6,
-              height: 40,
+              width: 4,
+              height: 20,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.event_available,
-                        size: 16,
-                        color: color,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '終日',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: color,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  if (memo.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      memo,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ],
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(
-                Icons.calendar_today,
-                size: 20,
+                Icons.event_available,
+                size: 12,
                 color: color,
               ),
             ),
@@ -842,25 +1260,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  // 時間指定予定のみのタイムテーブル表示
-  Widget _buildTimedScheduleTable(List<dynamic> timedSchedules) {
+  // タイムライン形式の時間指定予定セクション
+  Widget _buildTimelineScheduleSection(List<dynamic> timedSchedules) {
     // データが空の場合はデフォルト表示
     if (timedSchedules.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey[200]!, width: 1),
         ),
-        child: const Center(
-          child: Text(
-            '時間指定の予定がありません',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
+        child: Column(
+          children: [
+            Icon(
+              Icons.access_time,
+              size: 48,
+              color: Colors.grey[400],
             ),
-          ),
+            const SizedBox(height: 16),
+            Text(
+              '時間指定の予定がありません',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -868,429 +1295,212 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // 時間指定予定を時間順にソート
     timedSchedules.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 
-    // 日をまたぐ予定があるかチェック
-    final hasMultiDaySchedules = timedSchedules.any((schedule) {
-      final startDate = DateTime(
-        schedule.startDateTime.year,
-        schedule.startDateTime.month,
-        schedule.startDateTime.day,
-      );
-      final endDate = DateTime(
-        schedule.endDateTime.year,
-        schedule.endDateTime.month,
-        schedule.endDateTime.day,
-      );
-      return !startDate.isAtSameMomentAs(endDate);
-    });
-
-    int safeStartHour, safeEndHour, totalHours;
-
-    if (hasMultiDaySchedules) {
-      // 日をまたぐ予定がある場合は24時間表示
-      safeStartHour = 0;
-      safeEndHour = 24;
-      totalHours = 24;
-    } else {
-      // 通常の予定の場合
-      final today = DateTime.now();
-      final todayStartOfDay =
-          DateTime(today.year, today.month, today.day, 0, 0, 0);
-      final todayEndOfDay =
-          DateTime(today.year, today.month, today.day, 23, 59, 59);
-
-      int minHour = 24;
-      int maxHour = 0;
-
-      for (final schedule in timedSchedules) {
-        // 今日の範囲内での有効な時間を計算
-        int scheduleStartHour = schedule.startDateTime.isBefore(todayStartOfDay)
-            ? 0
-            : schedule.startDateTime.hour;
-        int scheduleEndHour = schedule.endDateTime.isAfter(todayEndOfDay)
-            ? 24
-            : schedule.endDateTime.hour +
-                (schedule.endDateTime.minute > 0 ? 1 : 0);
-
-        minHour = min(minHour, scheduleStartHour);
-        maxHour = max(maxHour, scheduleEndHour);
-      }
-
-      // 最小6時間、最大24時間の範囲を確保
-      final calculatedStartHour = (minHour - 1).clamp(0, 23);
-      final calculatedEndHour = (maxHour + 1).clamp(6, 24);
-
-      safeStartHour = calculatedStartHour;
-      safeEndHour = calculatedEndHour;
-      totalHours = safeEndHour - safeStartHour;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.green[200]!, width: 1),
-          ),
-          child: Row(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.green[50]!, Colors.green[100]!],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green[200]!, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Icon(
-                Icons.access_time,
-                color: Colors.green[600],
-                size: 18,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green[400],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.timeline,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Text(
-                '時間指定の予定',
+                'タイムライン',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green[600],
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.green[100],
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.green[200],
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${timedSchedules.length}件',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                     color: Colors.green[700],
                   ),
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        // タイムテーブル（改善版）
-        Container(
-          constraints: BoxConstraints(
-            minHeight: 100,
-            maxHeight: 300, // 最大高さを制限
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+          const SizedBox(height: 16),
+          // タイムライン表示
+          _buildTimelineView(timedSchedules),
+        ],
+      ),
+    );
+  }
+
+  // タイムライン表示を構築
+  Widget _buildTimelineView(List<dynamic> schedules) {
+    return Container(
+      height: 200,
+      child: ListView.builder(
+        itemCount: schedules.length,
+        itemBuilder: (context, index) {
+          final schedule = schedules[index];
+          final isLast = index == schedules.length - 1;
+          return _buildTimelineItem(schedule, isLast);
+        },
+      ),
+    );
+  }
+
+  // タイムラインアイテムを構築
+  Widget _buildTimelineItem(dynamic schedule, bool isLast) {
+    final title = schedule.title ?? 'タイトルなし';
+    final memo = schedule.memo ?? '';
+    final startTime = schedule.startDateTime;
+    final endTime = schedule.endDateTime;
+    final color = _getScheduleColor(schedule);
+
+    final startTimeStr =
+        '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
+    final endTimeStr =
+        '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // タイムライン軸
+        Column(
+          children: [
+            // 時間表示
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+              child: Text(
+                startTimeStr,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // 縦線
+            Container(
+              width: 2,
+              height: isLast ? 20 : 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    color,
+                    isLast ? color.withOpacity(0.3) : color,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+            if (!isLast) const SizedBox(height: 8),
+          ],
+        ),
+        const SizedBox(width: 16),
+        // 予定内容
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  color.withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+              border: Border.all(
+                color: color.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // スクロール可能なタイムテーブル
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: SizedBox(
-                        width: totalHours * 100.0 + 80, // 時間あたり100px + 余白
-                        height: 50 +
-                            (_calculateMaxLanes(timedSchedules) *
-                                45) + // 時間指定予定のレーン高さ（45pxに統一）
-                            20, // 下部の余白
-                        child: Stack(
-                          children: [
-                            // 横向き時間軸
-                            _buildHorizontalTimeAxis(
-                                safeStartHour, safeEndHour),
-                            // 横向き予定バー
-                            ..._buildNonOverlappingScheduleBars(
-                                timedSchedules, safeStartHour),
-                          ],
-                        ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: 12,
+                      color: color,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$startTimeStr - $endTimeStr',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: color,
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
                   ),
                 ),
+                if (memo.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    memo,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                      height: 1.2,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ],
-    );
-  }
-
-  // 横向き時間軸を構築
-  Widget _buildHorizontalTimeAxis(int startHour, int endHour) {
-    // 安全な範囲を確保
-    final safeStartHour = startHour.clamp(0, 23);
-    final safeEndHour = endHour.clamp(safeStartHour + 1, 24);
-    final hourCount = safeEndHour - safeStartHour;
-
-    // 最小1時間は確保
-    final finalHourCount = hourCount.clamp(1, 24);
-
-    return Positioned(
-      left: 0,
-      top: 0,
-      right: 0,
-      child: Container(
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          border: Border(
-            bottom: BorderSide(color: Colors.grey[300]!, width: 1),
-          ),
-        ),
-        child: Row(
-          children: List.generate(finalHourCount, (index) {
-            final hour = safeStartHour + index;
-            final isMainHour = hour % 6 == 0; // 6時間ごとに強調
-
-            return Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: isMainHour ? Colors.grey[400]! : Colors.grey[200]!,
-                      width: isMainHour ? 2 : 1,
-                    ),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    '${hour.toString().padLeft(2, '0')}:00',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight:
-                          isMainHour ? FontWeight.w600 : FontWeight.w400,
-                      color: isMainHour ? Colors.grey[700] : Colors.grey[600],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-
-  // 最大レーン数を計算
-  int _calculateMaxLanes(List<dynamic> schedules) {
-    if (schedules.isEmpty) return 0;
-
-    // 予定を時間順にソート
-    schedules.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
-
-    List<List<dynamic>> lanes = [];
-
-    for (final schedule in schedules) {
-      final startTime = schedule.startDateTime;
-      final endTime = schedule.endDateTime;
-
-      // 適切なレーンを見つける
-      int laneIndex = 0;
-      bool foundLane = false;
-
-      for (int i = 0; i < lanes.length; i++) {
-        bool canPlaceInLane = true;
-
-        for (final existingSchedule in lanes[i]) {
-          final existingStartTime = existingSchedule.startDateTime;
-          final existingEndTime = existingSchedule.endDateTime;
-
-          // 既存の予定との重なりをチェック
-          if (startTime.isBefore(existingEndTime) &&
-              endTime.isAfter(existingStartTime)) {
-            canPlaceInLane = false;
-            break;
-          }
-        }
-
-        if (canPlaceInLane) {
-          laneIndex = i;
-          foundLane = true;
-          break;
-        }
-      }
-
-      // 新しいレーンが必要な場合
-      if (!foundLane) {
-        lanes.add([]);
-        laneIndex = lanes.length - 1;
-      }
-
-      // 予定をレーンに追加
-      lanes[laneIndex].add(schedule);
-    }
-
-    return lanes.length;
-  }
-
-  // 重ならない予定バーを構築
-  List<Widget> _buildNonOverlappingScheduleBars(
-      List<dynamic> schedules, int startHour) {
-    if (schedules.isEmpty) return [];
-
-    // 予定を時間順にソート
-    schedules.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
-
-    List<Widget> bars = [];
-    List<List<dynamic>> lanes = []; // 各レーンに配置された予定を管理
-
-    for (final schedule in schedules) {
-      final startTime = schedule.startDateTime;
-      final endTime = schedule.endDateTime;
-
-      // 位置計算は_buildHorizontalScheduleBarで行う
-
-      // 適切なレーンを見つける
-      int laneIndex = 0;
-      bool foundLane = false;
-
-      for (int i = 0; i < lanes.length; i++) {
-        bool canPlaceInLane = true;
-
-        for (final existingSchedule in lanes[i]) {
-          final existingStartTime = existingSchedule.startDateTime;
-          final existingEndTime = existingSchedule.endDateTime;
-
-          // 既存の予定との重なりをチェック
-          if (startTime.isBefore(existingEndTime) &&
-              endTime.isAfter(existingStartTime)) {
-            canPlaceInLane = false;
-            break;
-          }
-        }
-
-        if (canPlaceInLane) {
-          laneIndex = i;
-          foundLane = true;
-          break;
-        }
-      }
-
-      // 新しいレーンが必要な場合
-      if (!foundLane) {
-        lanes.add([]);
-        laneIndex = lanes.length - 1;
-      }
-
-      // 予定をレーンに追加
-      lanes[laneIndex].add(schedule);
-
-      // 予定バーを構築
-      bars.add(_buildHorizontalScheduleBar(schedule, startHour, laneIndex));
-    }
-
-    return bars;
-  }
-
-  // 横向き予定バーを構築
-  Widget _buildHorizontalScheduleBar(dynamic schedule, int startHour,
-      [int laneIndex = 0]) {
-    final title = schedule.title ?? 'タイトルなし';
-    final startTime = schedule.startDateTime;
-    final endTime = schedule.endDateTime;
-    final color = _getScheduleColor(schedule);
-
-    // 今日の日付を取得
-    final today = DateTime.now();
-    final todayStartOfDay =
-        DateTime(today.year, today.month, today.day, 0, 0, 0);
-
-    // 日をまたぐ予定かチェック
-    final startDate = DateTime(
-      startTime.year,
-      startTime.month,
-      startTime.day,
-    );
-    final endDate = DateTime(
-      endTime.year,
-      endTime.month,
-      endTime.day,
-    );
-    final isMultiDay = !startDate.isAtSameMomentAs(endDate);
-
-    double left, width;
-
-    if (isMultiDay) {
-      // 日をまたぐ予定の場合
-      if (startTime.isBefore(todayStartOfDay)) {
-        // 昨日から始まる予定の場合、今日の00:00から表示
-        left = 0.0;
-        width = 80.0;
-      } else {
-        // 今日から始まって明日にまたがる予定の場合
-        final startMinutes = startTime.hour * 60 + startTime.minute;
-        final startMinutesFromBase = startMinutes - (startHour * 60);
-
-        left = (startMinutesFromBase / 60) * 100.0;
-        width = 80.0;
-      }
-    } else {
-      // 通常の予定の場合
-      final startMinutes = startTime.hour * 60 + startTime.minute;
-      final endMinutes = endTime.hour * 60 + endTime.minute;
-      final startMinutesFromBase = startMinutes - (startHour * 60);
-      final durationMinutes = endMinutes - startMinutes;
-
-      left = (startMinutesFromBase / 60) * 100.0;
-      width = (durationMinutes / 60) * 100.0;
-    }
-
-    return Positioned(
-      left: left,
-      top: 50 + (laneIndex * 45), // レーンの間隔を広げる（topの重複を修正）
-      child: Container(
-        width: width.clamp(80.0, 250.0), // 最小幅を少し大きく
-        height: 38, // 高さを少し増やす
-        margin: const EdgeInsets.symmetric(vertical: 2), // 上下にマージンを追加
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.9),
-              color.withOpacity(0.7),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: color.withOpacity(0.8),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13, // フォントサイズを少し大きく
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-      ),
     );
   }
 
