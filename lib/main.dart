@@ -106,6 +106,7 @@ class MyApp extends StatelessWidget {
         Locale('ja', 'JP'),
       ],
       locale: const Locale('ja', 'JP'),
+      debugShowCheckedModeBanner: false,
       home: isFirstLogin ? const LoginScreen() : HomeScreen(),
     );
   }
