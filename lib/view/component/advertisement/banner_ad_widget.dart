@@ -29,10 +29,11 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
     _loadBannerAd();
   }
 
-  void _loadBannerAd() {
+  void _loadBannerAd() async {
     // 各BannerAdWidgetが独立したBannerAdインスタンスを作成
+    final adUnitId = await AdMobService().bannerAdUnitId;
     _bannerAd = BannerAd(
-      adUnitId: AdMobService().bannerAdUnitId,
+      adUnitId: adUnitId,
       size: widget.adSize,
       request: const AdRequest(),
       listener: BannerAdListener(
