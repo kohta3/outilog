@@ -366,23 +366,23 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
 
   Widget _buildDateHeader(String dateKey) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 12),
+      margin: EdgeInsets.symmetric(vertical: 8),
       child: Column(
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [Colors.purple[50]!, Colors.pink[50]!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
                   color: Colors.purple.withOpacity(0.1),
-                  blurRadius: 8,
+                  blurRadius: 6,
                   offset: Offset(0, 2),
                 ),
               ],
@@ -393,16 +393,16 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
                 Icon(
                   Icons.calendar_today,
                   color: Colors.purple[400],
-                  size: 20,
+                  size: 16,
                 ),
-                SizedBox(width: 8),
+                SizedBox(width: 6),
                 Text(
                   dateKey,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.purple[700],
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
@@ -442,20 +442,20 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
           BoxShadow(
             color: displayColor.withOpacity(0.1),
-            blurRadius: 20,
-            offset: Offset(0, 4),
+            blurRadius: 15,
+            offset: Offset(0, 3),
           ),
         ],
         border: Border.all(
@@ -467,9 +467,9 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showTransactionOptions(context, item),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: EdgeInsets.all(20),
+            padding: EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -477,38 +477,38 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
                 Row(
                   children: [
                     Container(
-                      width: 12,
-                      height: 12,
+                      width: 10,
+                      height: 10,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: displayColor,
                         boxShadow: [
                           BoxShadow(
                             color: displayColor.withOpacity(0.3),
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(width: 12),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         isIncome ? '収入' : genre,
                         style: TextStyle(
-                          fontSize: 17,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Colors.grey[800],
-                          letterSpacing: 0.3,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ),
                     Container(
                       padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: amountColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: amountColor.withOpacity(0.3),
                           width: 1,
@@ -517,7 +517,7 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
                       child: Text(
                         displayAmount,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: amountColor,
                         ),
@@ -528,12 +528,12 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
 
                 // 店舗名
                 if (storeName.isNotEmpty) ...[
-                  SizedBox(height: 12),
+                  SizedBox(height: 8),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: Colors.orange[200]!,
                         width: 1,
@@ -544,14 +544,14 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
                       children: [
                         Icon(
                           Icons.store,
-                          size: 16,
+                          size: 14,
                           color: Colors.orange[600],
                         ),
-                        SizedBox(width: 6),
+                        SizedBox(width: 4),
                         Text(
                           storeName,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             color: Colors.orange[700],
                             fontWeight: FontWeight.w600,
                           ),
@@ -563,13 +563,13 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
 
                 // メモ
                 if (description.isNotEmpty) ...[
-                  SizedBox(height: 8),
+                  SizedBox(height: 6),
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(12),
+                    padding: EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: Colors.grey[200]!,
                         width: 1,
@@ -580,17 +580,17 @@ class _HouseholdBudgetListState extends ConsumerState<HouseholdBudgetList> {
                       children: [
                         Icon(
                           Icons.note_alt_outlined,
-                          size: 16,
+                          size: 14,
                           color: Colors.grey[500],
                         ),
-                        SizedBox(width: 8),
+                        SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             description,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               color: Colors.grey[600],
-                              height: 1.4,
+                              height: 1.3,
                             ),
                           ),
                         ),
