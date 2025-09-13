@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:holiday_jp/holiday_jp.dart' as holiday_jp;
-import 'package:intl/intl.dart';
-import '../provider/event_provider.dart';
 import 'package:outi_log/provider/schedule_firestore_provider.dart';
-import 'package:outi_log/provider/notification_service_provider.dart';
 import 'package:outi_log/models/schedule_model.dart';
-
 import 'package:outi_log/constant/color.dart';
+import 'package:outi_log/view/component/schedule/week_schadule_component.dart';
 import 'package:outi_log/view/component/schedule/dialog_component.dart';
-import 'package:outi_log/view/component/schedule/timeline_schedule_view.dart';
-import 'package:outi_log/view/component/advertisement/native_ad_widget.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key});
@@ -22,750 +16,734 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 }
 
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  bool _isTimelineView = false; // タイムライン表示の切り替えフラグ
 
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
 
-    // デバッグ用：初期化時の日付をログ出力
-    print('DEBUG: initState - _focusedDay: $_focusedDay');
-    print('DEBUG: initState - _selectedDay: $_selectedDay');
-
-    // イベントプロバイダーのテストデータを初期化
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 従来のイベントプロバイダーは必要に応じて初期化
-      // Firestoreスケジュールも初期化
       ref.read(scheduleFirestoreProvider.notifier).reloadSchedules();
     });
   }
 
+  // getSchedulesForDayをbuildメソッドの外に移動
+  List<ScheduleModel> _getSchedulesForDay(DateTime day) {
+    final scheduleNotifier = ref.read(scheduleFirestoreProvider.notifier);
+    return scheduleNotifier.getSchedulesForDate(day);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Firestoreスケジュールを監視して状態変更を検知
+    // スケジュールの状態を監視
     final schedules = ref.watch(scheduleFirestoreProvider);
 
-    return Scaffold(
-      backgroundColor: background,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => DialogComponent(
-              selectedDate: _selectedDay ?? _focusedDay,
-            ),
-          );
-        },
-        backgroundColor: themeColor,
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
-        child: Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
-          provider.Consumer<EventNotifier>(
-            builder: (context, eventNotifier, child) {
-              return TableCalendar(
-                key: ValueKey(schedules.length), // データ変更時に再構築
-                firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2100, 12, 31),
-                focusedDay: _focusedDay,
-                calendarFormat: _calendarFormat,
-                selectedDayPredicate: (day) {
-                  return isSameDay(_selectedDay, day);
-                },
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
-
-                    // デバッグ用：日付選択時のログ出力
-                    print('DEBUG: Day selected - selectedDay: $selectedDay');
-                    print(
-                        'DEBUG: Day selected - _selectedDay updated to: $_selectedDay');
-                  });
-                },
-                onFormatChanged: (format) {
-                  setState(() {
-                    _calendarFormat = format;
-                  });
-                },
-                onPageChanged: (focusedDay) {
-                  setState(() {
-                    _focusedDay = focusedDay;
-                  });
-                },
-                onDayLongPressed: (selectedDay, focusedDay) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => DialogComponent(
-                      selectedDate: selectedDay,
-                    ),
-                  );
-                },
-                // 祝日判定
-                holidayPredicate: (day) {
-                  return holiday_jp.isHoliday(day);
-                },
-                eventLoader: (day) {
-                  // schedulesの変更を参照することで自動更新をトリガー
-                  final _ = schedules; // 依存関係を作成
-
-                  // Firestoreスケジュールと従来のイベントを統合
-                  final firestoreEvents = ref
-                      .read(scheduleFirestoreProvider.notifier)
-                      .getSchedulesForDate(day);
-                  final localEvents = eventNotifier.getEventsForDay(day);
-
-                  // Firestoreスケジュールを優先し、ローカルイベントも表示
-                  final allEvents = <dynamic>[];
-                  allEvents.addAll(firestoreEvents);
-                  allEvents.addAll(localEvents);
-
-                  return allEvents;
-                },
-                calendarBuilders: CalendarBuilders(
-                  // 曜日ヘッダーのスタイル（土日）
-                  dowBuilder: (context, day) {
-                    if (day.weekday == DateTime.sunday) {
-                      final text = DateFormat.E('ja_JP').format(day);
-                      return Center(
-                        child: Text(
-                          text,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      );
-                    }
-                    if (day.weekday == DateTime.saturday) {
-                      final text = DateFormat.E('ja_JP').format(day);
-                      return Center(
-                        child: Text(
-                          text,
-                          style: const TextStyle(color: Colors.blue),
-                        ),
-                      );
-                    }
-                    return null;
-                  },
-                  // 土曜日と予定がある日の日付を強調表示
-                  defaultBuilder: (context, day, focusedDay) {
-                    // 土曜日の場合は青文字
-                    if (day.weekday == DateTime.saturday) {
-                      return Center(
-                        child: Text(
-                          '${day.day}',
-                          style: const TextStyle(color: Colors.blue),
-                        ),
-                      );
-                    }
-
-                    // 予定がある日は青い背景で強調
-                    final events = ref
-                        .read(scheduleFirestoreProvider.notifier)
-                        .getSchedulesForDate(day);
-                    final localEvents = provider.Provider.of<EventNotifier>(
-                            context,
-                            listen: false)
-                        .getEventsForDay(day);
-                    final hasEvents =
-                        events.isNotEmpty || localEvents.isNotEmpty;
-
-                    if (hasEvents) {
-                      return Container(
-                        margin: EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.blue[200]!,
-                            width: 1,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${day.day}',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return null;
-                  },
-                  // カスタムマーカーを表示（件数のみ）
-                  markerBuilder: (context, day, events) {
-                    if (events.isEmpty) return null;
-
-                    return Positioned(
-                      bottom: 2,
-                      child: Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: themeColor,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          '${events.length}件',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+    return DefaultTabController(
+        length: 2,
+        child: Scaffold(
+            backgroundColor: background,
+            body: SafeArea(
+              top: false,
+              bottom: true,
+              child: Column(
+                children: [
+                  Container(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                  },
-                ),
-                calendarStyle: CalendarStyle(
-                  // 祝日と日曜日の文字色を赤にする
-                  holidayTextStyle: const TextStyle(color: Colors.red),
-                  weekendTextStyle: const TextStyle(color: Colors.red),
-                  // 祝日のマーカー（紫の丸）を非表示にする
-                  holidayDecoration:
-                      const BoxDecoration(color: Colors.transparent),
-                  selectedDecoration: BoxDecoration(
-                    color: themeColor,
-                    shape: BoxShape.circle,
+                      child: Row(
+                        children: [
+                          Flexible(
+                            flex: 3,
+                            child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: TabBar(
+                                  tabs: const [
+                                    Tab(
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.calendar_month, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('月'),
+                                        ],
+                                      ),
+                                    ),
+                                    Tab(
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.view_week, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('4日間'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  indicator: BoxDecoration(
+                                    color: themeColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  labelColor: Colors.white,
+                                  unselectedLabelColor: Colors.grey[600],
+                                  labelStyle: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                  unselectedLabelStyle: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                  indicatorSize: TabBarIndicatorSize.tab,
+                                  dividerColor: Colors.transparent,
+                                )),
+                          ),
+                          Flexible(
+                            flex: 1,
+                            child: Center(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: themeColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => DialogComponent(
+                                      selectedDate: _selectedDay,
+                                    ),
+                                  );
+                                },
+                                child: Text('追加'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TableCalendar(
+                            firstDay: DateTime.utc(2000, 1, 1),
+                            lastDay: DateTime.utc(2100, 12, 31),
+                            focusedDay: _focusedDay,
+                            calendarFormat: CalendarFormat.month,
+                            shouldFillViewport: true,
+                            selectedDayPredicate: (day) =>
+                                isSameDay(_selectedDay, day),
+                            eventLoader: _getSchedulesForDay,
+                            headerStyle: const HeaderStyle(
+                              formatButtonVisible: false,
+                              titleCentered: false,
+                              leftChevronVisible: false,
+                              rightChevronVisible: false,
+                              headerPadding: EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 16),
+                              titleTextStyle: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF333333), // Colors.grey[800]
+                              ),
+                            ),
+                            onDaySelected: (selectedDay, focusedDay) {
+                              setState(() {
+                                _selectedDay = selectedDay;
+                                _focusedDay = focusedDay;
+                              });
+                            },
+                            locale: 'ja_JP',
+                            holidayPredicate: (day) =>
+                                holiday_jp.isHoliday(day),
+                            daysOfWeekHeight: 30.0,
+                            calendarBuilders: CalendarBuilders(
+                              headerTitleBuilder: (context, date) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16, horizontal: 16),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        '${date.year}年${date.month}月',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey[800]!,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              selectedBuilder: (context, day, focusedDay) {
+                                return Stack(
+                                  alignment: Alignment.topCenter,
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue[600],
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    _DayCellContent(
+                                      day: day,
+                                      schedules: _getSchedulesForDay(day),
+                                      dayTextColor: Colors.white,
+                                      isBold: true,
+                                      onEditSchedule: _editSchedule,
+                                      onDeleteSchedule: _deleteSchedule,
+                                    ),
+                                  ],
+                                );
+                              },
+                              todayBuilder: (context, day, focusedDay) {
+                                return Stack(
+                                  alignment: Alignment.topCenter,
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: Colors.orange[300]!,
+                                            width: 2),
+                                      ),
+                                    ),
+                                    _DayCellContent(
+                                      day: day,
+                                      schedules: _getSchedulesForDay(day),
+                                      dayTextColor: _getTextColorForDay(day),
+                                      isBold: true,
+                                      onEditSchedule: _editSchedule,
+                                      onDeleteSchedule: _deleteSchedule,
+                                    ),
+                                  ],
+                                );
+                              },
+                              defaultBuilder: (context, day, focusedDay) {
+                                return _DayCellContent(
+                                  day: day,
+                                  schedules: _getSchedulesForDay(day),
+                                  dayTextColor: _getTextColorForDay(day),
+                                  onEditSchedule: _editSchedule,
+                                  onDeleteSchedule: _deleteSchedule,
+                                );
+                              },
+                              outsideBuilder: (context, day, focusedDay) {
+                                return _DayCellContent(
+                                  day: day,
+                                  schedules: _getSchedulesForDay(day),
+                                  dayTextColor:
+                                      _getTextColorForDay(day, isOutside: true),
+                                  onEditSchedule: _editSchedule,
+                                  onDeleteSchedule: _deleteSchedule,
+                                );
+                              },
+                              holidayBuilder: (context, day, focusedDay) {
+                                return _DayCellContent(
+                                  day: day,
+                                  schedules: _getSchedulesForDay(day),
+                                  dayTextColor: Colors.red[600]!,
+                                  isBold: true,
+                                  onEditSchedule: _editSchedule,
+                                  onDeleteSchedule: _deleteSchedule,
+                                );
+                              },
+                            ),
+                            daysOfWeekStyle: DaysOfWeekStyle(
+                              weekendStyle: TextStyle(
+                                color: Colors.red[600]!,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              weekdayStyle: TextStyle(
+                                color: Colors.grey[700]!,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            calendarStyle: const CalendarStyle(
+                              outsideDaysVisible: true,
+                              cellMargin: EdgeInsets.all(0),
+                              cellPadding: EdgeInsets.all(4),
+                              markersMaxCount: 0,
+                            ),
+                          ),
+                        ),
+                        WeekSchaduleComponent(
+                          schedules: schedules,
+                          onEditSchedule: _editSchedule,
+                          onDeleteSchedule: _deleteSchedule,
+                        ),
+                      ],
+                    ),
                   ),
-                  todayDecoration: BoxDecoration(
-                    color: Colors.orange,
-                    shape: BoxShape.circle,
-                  ),
-                  // デフォルトのマーカーを非表示にして、カスタムマーカーを使用
-                  markerDecoration:
-                      const BoxDecoration(color: Colors.transparent),
-                  // マーカーのサイズを調整
-                  markerSize: 0,
-                  // マーカーの位置を調整
-                  markerMargin: EdgeInsets.zero,
-                  // 日付の下にマーカー用のスペースを確保
-                  cellMargin: EdgeInsets.only(bottom: 12),
-                ),
-                headerStyle: HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                ),
-                locale: 'ja_JP',
-              );
-            },
+                ],
+              ),
+            )));
+  }
+
+  // 日付の色を決定するヘルパーメソッド
+  Color _getTextColorForDay(DateTime day, {bool isOutside = false}) {
+    if (isOutside) {
+      if (day.weekday == DateTime.sunday) return Colors.red[300]!;
+      if (day.weekday == DateTime.saturday) return Colors.blue[300]!;
+      return Colors.grey[400]!;
+    }
+    if (holiday_jp.isHoliday(day) || day.weekday == DateTime.sunday) {
+      return Colors.red[600]!;
+    }
+    if (day.weekday == DateTime.saturday) return Colors.blue[600]!;
+    return Colors.grey[800]!;
+  }
+
+  // スケジュール編集
+  void _editSchedule(ScheduleModel schedule) {
+    // 現在のダイアログが開いている場合のみ閉じる
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+    showDialog(
+      context: context,
+      builder: (context) => DialogComponent(
+        selectedDate: schedule.startDateTime,
+        initialSchedule: schedule,
+      ),
+    );
+  }
+
+  // スケジュール削除
+  void _deleteSchedule(ScheduleModel schedule) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('予定を削除'),
+        content: Text('「${schedule.title}」を削除しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル'),
           ),
-          SizedBox(height: 16),
-          // 表示切り替えボタン
-          _buildViewToggleButtons(),
-          SizedBox(height: 8),
-          Expanded(
-            child: _isTimelineView ? _buildTimelineView() : _buildEventList(),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('削除'),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildEventList() {
-    // 状態変更を監視（リビルドトリガー用）
-    ref.watch(scheduleFirestoreProvider);
-    final firestoreSchedules = ref
-        .read(scheduleFirestoreProvider.notifier)
-        .getSchedulesForDate(_selectedDay!);
+    if (confirmed == true && schedule.id != null) {
+      final success = await ref
+          .read(scheduleFirestoreProvider.notifier)
+          .deleteSchedule(schedule.id!);
 
-    return provider.Consumer<EventNotifier>(
-      builder: (context, eventNotifier, child) {
-        final localEvents = eventNotifier.getEventsForDay(_selectedDay!);
-
-        // Firestoreスケジュールとローカルイベントを統合
-        final totalEvents = firestoreSchedules.length + localEvents.length;
-
-        if (totalEvents == 0) {
-          return Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.event_note,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    '予定がありません',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '${_selectedDay!.month}月${_selectedDay!.day}日',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => DialogComponent(
-                          selectedDate: _selectedDay,
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.add),
-                    label: Text('追加'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('予定を削除しました'),
+              backgroundColor: Colors.green,
             ),
           );
         }
-
-        // ネイティブ広告を挿入するためのリストを作成
-        List<Widget> widgets = [];
-        int scheduleIndex = 0;
-
-        // Firestoreスケジュールを追加し、4スケジュールごとにネイティブ広告を挿入
-        for (int i = 0; i < firestoreSchedules.length; i++) {
-          widgets.add(_buildFirestoreScheduleCard(firestoreSchedules[i]));
-          scheduleIndex++;
-
-          // 4スケジュールごとにネイティブ広告を挿入
-          if (scheduleIndex % 4 == 0) {
-            widgets.add(const ListNativeAdWidget(
-              margin: EdgeInsets.symmetric(vertical: 8),
-            ));
-          }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('予定の削除に失敗しました'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
-
-        // ローカルイベントを追加
-        for (int i = 0; i < localEvents.length; i++) {
-          widgets.add(_buildLocalEventCard(localEvents[i]));
-          scheduleIndex++;
-
-          // 4スケジュールごとにネイティブ広告を挿入
-          if (scheduleIndex % 4 == 0) {
-            widgets.add(const ListNativeAdWidget(
-              margin: EdgeInsets.symmetric(vertical: 8),
-            ));
-          }
-        }
-
-        return ListView(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          children: widgets,
-        );
-      },
-    );
+      }
+    }
   }
+}
 
-  Widget _buildFirestoreScheduleCard(schedule) {
-    // 終日の場合は時刻を表示しない
-    final timeDisplay = schedule.isAllDay
-        ? '終日'
-        : '${DateFormat('HH:mm').format(schedule.startDateTime)} - ${DateFormat('HH:mm').format(schedule.endDateTime)}';
+/// カレンダーの各日付セルのコンテンツ（日付とラベル）を表示する共通ウィジェット
+class _DayCellContent extends StatelessWidget {
+  final DateTime day;
+  final List<ScheduleModel> schedules;
+  final Color dayTextColor;
+  final bool isBold;
+  final Function(ScheduleModel) onEditSchedule;
+  final Function(ScheduleModel) onDeleteSchedule;
 
-    return Card(
-      margin: EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _getScheduleColor(schedule),
-          child: Icon(
-            schedule.isAllDay ? Icons.event_available : Icons.event,
-            color: Colors.white,
-          ),
-        ),
-        title: Text(
-          schedule.title,
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  const _DayCellContent({
+    required this.day,
+    required this.schedules,
+    required this.dayTextColor,
+    required this.onEditSchedule,
+    required this.onDeleteSchedule,
+    this.isBold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onDoubleTap: () async {
+        await showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${day.month}月${day.day}日の予定',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (schedules.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                          '予定はありません',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    else
+                      ...schedules
+                          .map((schedule) => _ScheduleListItem(
+                                schedule: schedule,
+                                onEdit: () => onEditSchedule(schedule),
+                                onDelete: () => onDeleteSchedule(schedule),
+                              ))
+                          .toList(),
+                    const SizedBox(height: 16),
+                  ],
+                )));
+      },
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  schedule.isAllDay ? Icons.today : Icons.access_time,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                SizedBox(width: 4),
-                Text(
-                  timeDisplay,
+            SizedBox(
+              height: 36,
+              width: 36,
+              child: Center(
+                child: Text(
+                  '${day.day}',
                   style: TextStyle(
-                    color:
-                        schedule.isAllDay ? Colors.blue[700] : Colors.grey[700],
-                    fontWeight:
-                        schedule.isAllDay ? FontWeight.w600 : FontWeight.normal,
+                    color: dayTextColor,
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 14,
                   ),
                 ),
-              ],
-            ),
-            if (schedule.memo != null && schedule.memo!.isNotEmpty) ...[
-              SizedBox(height: 4),
-              Text(
-                schedule.memo!,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
-            ],
-          ],
-        ),
-        trailing: PopupMenuButton(
-          icon: Icon(Icons.more_vert),
-          onSelected: (value) async {
-            if (value == 'edit') {
-              // 編集ダイアログを表示
-              showDialog(
-                context: context,
-                builder: (context) => DialogComponent(
-                  selectedDate: _selectedDay,
-                  initialSchedule: schedule,
+            ),
+            if (schedules.isNotEmpty)
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  child: Column(
+                    children: schedules.take(3).map((schedule) {
+                      return Flexible(
+                          child: _MultiDayScheduleLabel(
+                        schedule: schedule,
+                        day: day, // 現在の日付を渡す
+                      ));
+                    }).toList(),
+                  ),
                 ),
-              ).then((_) {
-                // ダイアログ閉じた後にカレンダー更新
-                setState(() {});
-              });
-            } else if (value == 'delete') {
-              final confirmed = await _showDeleteConfirmDialog();
-              if (confirmed && schedule.id != null) {
-                final success = await ref
-                    .read(scheduleFirestoreProvider.notifier)
-                    .deleteSchedule(schedule.id!);
-                if (success) {
-                  // スケジュール削除時に通知もキャンセル
-                  final notificationService =
-                      ref.read(notificationServiceProvider);
-                  await notificationService
-                      .cancelAllNotificationsForSchedule(schedule.id!);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('予定を削除しました'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  // カレンダー表示を強制更新
-                  setState(() {});
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('予定の削除に失敗しました'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, color: Colors.blue),
-                  SizedBox(width: 8),
-                  Text('編集'),
-                ],
               ),
-            ),
-            PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('削除'),
-                ],
+            if (schedules.isEmpty)
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
               ),
-            ),
           ],
-        ),
-        onTap: () {
-          // 編集ダイアログを表示
-          showDialog(
-            context: context,
-            builder: (context) => DialogComponent(
-              selectedDate: _selectedDay,
-              initialSchedule: schedule,
-            ),
-          ).then((_) {
-            // ダイアログ閉じた後にカレンダー更新
-            setState(() {});
-          });
-        },
-      ),
-    );
-  }
-
-  // 16進数文字列をColorに変換
-  Color _hexToColor(String hex) {
-    hex = hex.replaceAll('#', '');
-    if (hex.length == 6) {
-      hex = 'FF$hex'; // アルファ値を追加
-    }
-    return Color(int.parse(hex, radix: 16));
-  }
-
-  // スケジュールの色を取得
-  Color _getScheduleColor(ScheduleModel schedule) {
-    if (schedule.color != null) {
-      return _hexToColor(schedule.color!);
-    }
-    // 色が設定されていない場合はタイトルのハッシュから色を生成
-    final colors = [
-      Color(0xFF375E97), // ダークブルー
-      Color(0xFFFB6542), // オレンジレッド
-      Color(0xFF3F681C), // ダークグリーン
-      Color(0xFF6FB98F), // ミントグリーン
-      Color(0xFFF18D9E), // ピンク
-      Color(0xFF4CB5F5), // ライトブルー
-      Color(0xFFF4CC70), // イエロー
-      Color(0xFF8D230F), // ダークレッド
-    ];
-    final index = schedule.title.hashCode.abs() % colors.length;
-    return colors[index];
-  }
-
-  Widget _buildLocalEventCard(event) {
-    return Card(
-      margin: EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue,
-          child: Icon(
-            Icons.event_note,
-            color: Colors.white,
-          ),
-        ),
-        title: Text(event.title),
-        subtitle: Text(event.time.toString()),
-        trailing: IconButton(
-          icon: Icon(Icons.delete, color: Colors.red),
-          onPressed: () {
-            // ローカルイベント削除処理
-          },
         ),
       ),
     );
   }
+}
 
-  Future<bool> _showDeleteConfirmDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('予定を削除'),
-            content: Text('この予定を削除しますか？\nこの操作は取り消せません。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text('キャンセル'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('削除'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+/// 複数日にまたがるスケジュールラベルを表示するウィジェット (新規追加)
+class _MultiDayScheduleLabel extends StatelessWidget {
+  final ScheduleModel schedule;
+  final DateTime day; // このラベルが表示される日付
+
+  const _MultiDayScheduleLabel({
+    required this.schedule,
+    required this.day,
+  });
+
+  Color _parseColor(String? colorString) {
+    if (colorString == null || colorString.isEmpty) return Colors.blue;
+    String hexColor = colorString.replaceAll('#', '');
+    if (hexColor.length == 6) return Color(int.parse('FF$hexColor', radix: 16));
+    if (hexColor.length == 8) return Color(int.parse(hexColor, radix: 16));
+    return Colors.blue;
   }
 
-  Widget _buildViewToggleButtons() {
-    // 状態変更を監視（リビルドトリガー用）
-    ref.watch(scheduleFirestoreProvider);
-    final firestoreSchedules = ref
-        .read(scheduleFirestoreProvider.notifier)
-        .getSchedulesForDate(_selectedDay!);
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseColor(schedule.color);
 
-    // タイムライン表示可能な予定があるかチェック（終日予定も含む）
-    final hasSchedulesForTimeline = firestoreSchedules.isNotEmpty;
+    // 日付のみを比較するために、時刻情報をリセット
+    final scheduleStart = DateTime.utc(schedule.startDateTime.year,
+        schedule.startDateTime.month, schedule.startDateTime.day);
+    final scheduleEnd = DateTime.utc(schedule.endDateTime.year,
+        schedule.endDateTime.month, schedule.endDateTime.day);
+    final currentDay = DateTime.utc(day.year, day.month, day.day);
 
-    if (firestoreSchedules.isEmpty) {
-      return SizedBox.shrink(); // 予定がない場合は非表示
+    final isStart = isSameDay(scheduleStart, currentDay);
+    final isEnd = isSameDay(scheduleEnd, currentDay);
+
+    // 角丸の設定
+    BorderRadius borderRadius;
+    if (isStart && isEnd) {
+      // 単独日のイベント
+      borderRadius = BorderRadius.circular(4);
+    } else if (isStart) {
+      // 開始日
+      borderRadius = const BorderRadius.horizontal(left: Radius.circular(4));
+    } else if (isEnd) {
+      // 終了日
+      borderRadius = const BorderRadius.horizontal(right: Radius.circular(4));
+    } else {
+      // 中間日
+      borderRadius = BorderRadius.zero;
     }
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Text(
-            '表示形式:',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
-            ),
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 1.5), // 垂直方向の余白を少し調整
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.9),
+        borderRadius: borderRadius,
+      ),
+      child: Text(
+          // タイトルは開始日または週の始まりの月曜日にのみ表示
+          (isStart || day.weekday == DateTime.monday) ? schedule.title : '',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
           ),
-          SizedBox(width: 8),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _isTimelineView = false;
-                      });
-                    },
-                    icon: Icon(
-                      Icons.list,
-                      size: 18,
-                      color: !_isTimelineView ? Colors.white : Colors.blue[700],
-                    ),
-                    label: Text(
-                      'リスト',
-                      style: TextStyle(
-                        color:
-                            !_isTimelineView ? Colors.white : Colors.blue[700],
-                        fontSize: 12,
-                        fontWeight: !_isTimelineView
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: !_isTimelineView
-                          ? Colors.blue[600]!
-                          : Colors.blue[50]!,
-                      side: BorderSide(
-                        color: !_isTimelineView
-                            ? Colors.blue[600]!
-                            : Colors.blue[300]!,
-                        width: 1.5,
-                      ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+          maxLines: 1,
+          overflow: TextOverflow.clip, // Ellipsisだと...が見えてしまうのでclipする
+          textAlign: TextAlign.center),
+    );
+  }
+}
+
+/// モーダルボトムシート内でスケジュールを表示するウィジェット
+class _ScheduleListItem extends StatelessWidget {
+  final ScheduleModel schedule;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _ScheduleListItem({
+    required this.schedule,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  Color _parseColor(String? colorString) {
+    if (colorString == null || colorString.isEmpty) return Colors.blue;
+    String hexColor = colorString.replaceAll('#', '');
+    if (hexColor.length == 6) return Color(int.parse('FF$hexColor', radix: 16));
+    if (hexColor.length == 8) return Color(int.parse(hexColor, radix: 16));
+    return Colors.blue;
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return '';
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseColor(schedule.color);
+
+    return GestureDetector(
+      onTap: () => _showActionMenu(context),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    schedule.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
                     ),
                   ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: hasSchedulesForTimeline
-                        ? () {
-                            setState(() {
-                              _isTimelineView = true;
-                            });
-                          }
-                        : null,
-                    icon: Icon(
-                      Icons.schedule,
-                      size: 18,
-                      color: _isTimelineView
-                          ? Colors.white
-                          : hasSchedulesForTimeline
-                              ? Colors.green[700]
-                              : Colors.grey,
-                    ),
-                    label: Text(
-                      'タイムライン',
+                  if (schedule.memo != null && schedule.memo!.isNotEmpty)
+                    const SizedBox(height: 4),
+                  if (schedule.memo != null && schedule.memo!.isNotEmpty)
+                    Text(
+                      schedule.memo!,
                       style: TextStyle(
-                        color: _isTimelineView
-                            ? Colors.white
-                            : hasSchedulesForTimeline
-                                ? Colors.green[700]
-                                : Colors.grey,
-                        fontSize: 12,
-                        fontWeight: _isTimelineView
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                        fontSize: 14,
+                        color: Colors.grey[600],
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: _isTimelineView
-                          ? Colors.green[600]!
-                          : Colors.green[50]!,
-                      side: BorderSide(
-                        color: hasSchedulesForTimeline
-                            ? (_isTimelineView
-                                ? Colors.green[600]!
-                                : Colors.green[300]!)
-                            : Colors.grey,
-                        width: 1.5,
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey[500],
                       ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatTime(schedule.startDateTime),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
+                      Text(
+                        ' - ${_formatTime(schedule.endDateTime)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            Icon(
+              Icons.more_vert,
+              color: Colors.grey[400],
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTimelineView() {
-    // 状態変更を監視（リビルドトリガー用）
-    ref.watch(scheduleFirestoreProvider);
-    final firestoreSchedules = ref
-        .read(scheduleFirestoreProvider.notifier)
-        .getSchedulesForDate(_selectedDay!);
-
-    if (firestoreSchedules.isEmpty) {
-      return Center(
+  void _showActionMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.event_note,
-              size: 64,
-              color: Colors.grey[400],
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.blue),
+              title: const Text('編集'),
+              onTap: () {
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+                onEdit();
+              },
             ),
-            SizedBox(height: 16),
-            Text(
-              '予定がありません',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('削除'),
+              onTap: () {
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+                onDelete();
+              },
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('キャンセル'),
             ),
           ],
         ),
-      );
-    }
-
-    return TimelineScheduleView(
-      schedules: firestoreSchedules,
-      selectedDate: _selectedDay!,
-      onAddSchedule: () {
-        showDialog(
-          context: context,
-          builder: (context) => DialogComponent(
-            selectedDate: _selectedDay ?? _focusedDay,
-          ),
-        );
-      },
+      ),
     );
   }
 }
