@@ -32,5 +32,9 @@
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
 	<string>1:525658721900:ios:a6be52e6bd27265ecbd249</string>
+	<key>IS_CRASHLYTICS_ENABLED</key>
+	<true/>
+	<key>IS_CRASHLYTICS_COLLECTION_ENABLED</key>
+	<true/>
 </dict>
 </plist>
