@@ -63,5 +63,44 @@
 	<string>このアプリは写真を選択するためにフォトライブラリの許可が必要です。</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-6529629959594411~2628276458</string>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UIStatusBarHidden</key>
+	<false/>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>UIPrerenderedIcon</key>
+	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Roboto-Regular.ttf</string>
+		<string>Roboto-Bold.ttf</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>firebaseapp.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+			</dict>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UISceneDelegate</key>
+	<dict>
+		<key>UISceneConfigurationName</key>
+		<string>Default Configuration</string>
+		<key>UISceneDelegateClassName</key>
+		<string>SceneDelegate</string>
+	</dict>
 </dict>
 </plist>

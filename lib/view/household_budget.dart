@@ -12,6 +12,7 @@ import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/category_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:outi_log/utils/memory_optimizer.dart';
 
 class AccountBookScreen extends ConsumerStatefulWidget {
   const AccountBookScreen({super.key});
@@ -49,6 +50,18 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
 
       if (currentSpace == null) {
         setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // キャッシュから取得を試行
+      final cacheKey = 'transactions_${currentSpace.id}';
+      final cachedData = MemoryOptimizer.getCachedData<Map<String, List<Map<String, String>>>>(cacheKey);
+      
+      if (cachedData != null) {
+        setState(() {
+          data = cachedData;
           _isLoading = false;
         });
         return;
@@ -103,6 +116,9 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
           });
         }
       }
+
+      // キャッシュに保存
+      MemoryOptimizer.cacheData(cacheKey, formattedData);
 
       setState(() {
         data = formattedData;

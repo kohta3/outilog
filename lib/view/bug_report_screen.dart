@@ -7,6 +7,7 @@ import 'package:outi_log/provider/auth_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:outi_log/utils/image_optimizer.dart';
 
 class BugReportScreen extends ConsumerStatefulWidget {
   const BugReportScreen({super.key});
@@ -219,7 +220,7 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
+                            child: ImageOptimizer.buildOptimizedFileImage(
                               _selectedImage!,
                               width: double.infinity,
                               height: double.infinity,
@@ -376,9 +377,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
+        maxWidth: ImageOptimizer.screenshotOptions.maxWidth,
+        maxHeight: ImageOptimizer.screenshotOptions.maxHeight,
+        imageQuality: ImageOptimizer.screenshotOptions.imageQuality,
       );
 
       if (image != null) {

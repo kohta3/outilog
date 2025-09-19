@@ -12,6 +12,7 @@ import 'package:outi_log/infrastructure/storage_infrastructure.dart';
 import 'package:outi_log/infrastructure/space_infrastructure.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:outi_log/utils/image_optimizer.dart';
 
 class SpaceSettingsScreen extends ConsumerStatefulWidget {
   final SpaceModel space;
@@ -269,26 +270,25 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: _selectedHeaderImage != null
-                      ? Image.file(
+                      ? ImageOptimizer.buildOptimizedFileImage(
                           _selectedHeaderImage!,
                           fit: BoxFit.cover,
                         )
                       : widget.space.headerImageUrl != null
-                          ? Image.network(
+                          ? ImageOptimizer.buildOptimizedNetworkImage(
                               widget.space.headerImageUrl!,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey.shade200,
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      color: Colors.grey,
-                                      size: 40,
-                                    ),
+                              maxBytes: 2 * 1024 * 1024, // 2MB制限
+                              errorWidget: Container(
+                                color: Colors.grey.shade200,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.grey,
+                                    size: 40,
                                   ),
-                                );
-                              },
+                                ),
+                              ),
                             )
                           : null,
                 ),
@@ -349,9 +349,9 @@ class _SpaceSettingsScreenState extends ConsumerState<SpaceSettingsScreen> {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
+        maxWidth: ImageOptimizer.headerImageOptions.maxWidth,
+        maxHeight: ImageOptimizer.headerImageOptions.maxHeight,
+        imageQuality: ImageOptimizer.headerImageOptions.imageQuality,
       );
 
       if (image != null) {

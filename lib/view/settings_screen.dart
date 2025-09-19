@@ -16,6 +16,7 @@ import 'package:outi_log/view/terms_of_service_screen.dart';
 import 'package:outi_log/view/help_support_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:outi_log/utils/image_optimizer.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -907,9 +908,9 @@ class _ProfileEditDialogState extends ConsumerState<ProfileEditDialog> {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: source,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
+        maxWidth: ImageOptimizer.profileImageOptions.maxWidth,
+        maxHeight: ImageOptimizer.profileImageOptions.maxHeight,
+        imageQuality: ImageOptimizer.profileImageOptions.imageQuality,
       );
 
       if (image != null) {

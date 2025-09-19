@@ -11,6 +11,7 @@ import 'package:outi_log/view/component/advertisement/native_ad_widget.dart';
 import 'package:outi_log/utils/format.dart';
 import 'package:outi_log/models/space_model.dart';
 import 'package:outi_log/services/analytics_service.dart';
+import 'package:outi_log/utils/image_optimizer.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -641,15 +642,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 currentSpace.headerImageUrl!.isNotEmpty
             ? Stack(
                 children: [
-                  // ヘッダー画像
-                  Image.network(
+                  // ヘッダー画像（最適化版）
+                  ImageOptimizer.buildOptimizedNetworkImage(
                     currentSpace.headerImageUrl!,
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildStylishDefaultHeader(currentSpace.spaceName);
-                    },
+                    maxBytes: 2 * 1024 * 1024, // 2MB制限
+                    errorWidget: _buildStylishDefaultHeader(currentSpace.spaceName),
+                    placeholder: Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                        ),
+                      ),
+                    ),
                   ),
                   // グラデーションオーバーレイ（より美しいグラデーション）
                   Container(

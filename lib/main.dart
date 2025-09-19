@@ -15,6 +15,7 @@ import 'package:outi_log/services/notification_service.dart';
 import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:outi_log/services/analytics_service.dart';
 import 'package:outi_log/services/admob_service.dart';
+import 'package:outi_log/utils/memory_optimizer.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -63,6 +64,10 @@ void main() async {
 
   await initializeDateFormatting('ja_JP', null);
 
+  // メモリ最適化の初期化（最初に実行）
+  MemoryOptimizer.monitorMemoryUsage();
+
+  // サービスを遅延初期化（必要時のみ）
   // 通知サービスを初期化
   final notificationService = NotificationService();
   await notificationService.initialize();
