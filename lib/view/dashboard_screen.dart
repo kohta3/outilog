@@ -649,13 +649,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     height: double.infinity,
                     fit: BoxFit.cover,
                     maxBytes: 2 * 1024 * 1024, // 2MB制限
-                    errorWidget: _buildStylishDefaultHeader(currentSpace.spaceName),
+                    errorWidget:
+                        _buildStylishDefaultHeader(currentSpace.spaceName),
                     placeholder: Container(
                       color: Colors.grey.shade200,
                       child: const Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.grey),
                         ),
                       ),
                     ),
@@ -1055,6 +1057,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(height: 20),
                 todaySchedules.isEmpty
                     ? Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.all(40),
                         decoration: BoxDecoration(
                           color: Colors.grey[50],

@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -16,6 +17,7 @@ import 'package:outi_log/services/remote_notification_service.dart';
 import 'package:outi_log/services/analytics_service.dart';
 import 'package:outi_log/services/admob_service.dart';
 import 'package:outi_log/utils/memory_optimizer.dart';
+import 'package:outi_log/utils/lazy_initializer.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -67,18 +69,8 @@ void main() async {
   // メモリ最適化の初期化（最初に実行）
   MemoryOptimizer.monitorMemoryUsage();
 
-  // サービスを遅延初期化（必要時のみ）
-  // 通知サービスを初期化
-  final notificationService = NotificationService();
-  await notificationService.initialize();
-
-  // Analyticsサービスを初期化
-  final analyticsService = AnalyticsService();
-  await analyticsService.initialize();
-
-  // AdMobサービスを初期化
-  final admobService = AdMobService();
-  await admobService.initialize();
+  // 初回起動時の最適化
+  await _initializeAppSafely();
 
   runApp(
     ProviderScope(
@@ -87,6 +79,43 @@ void main() async {
       ),
     ),
   );
+}
+
+/// アプリの安全な初期化（初回起動時対応）
+Future<void> _initializeAppSafely() async {
+  try {
+    // サービスを遅延初期化として登録
+    LazyInitializer.registerService('notification', () async {
+      final service = NotificationService();
+      await service.initialize();
+      return service;
+    });
+
+    LazyInitializer.registerService('analytics', () async {
+      final service = AnalyticsService();
+      await service.initialize();
+      return service;
+    });
+
+    LazyInitializer.registerService('admob', () async {
+      final service = AdMobService();
+      // 古いデバイスではAdMobの初期化を遅延
+      if (kDebugMode) {
+        print('AdMob initialization delayed for memory optimization');
+      }
+      return service;
+    });
+
+    // 初回起動時は最小限のサービスのみ初期化
+    if (kDebugMode) {
+      print('App initialized safely for first launch');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('Error during app initialization: $e');
+    }
+    // 初期化に失敗してもアプリは続行
+  }
 }
 
 class MyApp extends StatelessWidget {

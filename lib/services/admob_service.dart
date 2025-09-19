@@ -103,6 +103,9 @@ class AdMobService {
   AppOpenAd? _appOpenAd;
 
   bool _isInitialized = false;
+  int _bannerAdId = 0;
+  int _nativeAdId = 0;
+  int _interstitialAdId = 0;
 
   /// AdMobを初期化
   Future<void> initialize() async {
@@ -114,6 +117,23 @@ class AdMobService {
       print('AdMob initialized successfully');
     } catch (e) {
       print('Failed to initialize AdMob: $e');
+      // 初期化に失敗してもアプリは続行
+    }
+  }
+
+  /// 安全な広告読み込み（重複防止）
+  Future<void> safeLoadAd<T>(
+    String adType,
+    Future<void> Function() loadFunction,
+  ) async {
+    try {
+      await loadFunction();
+    } catch (e) {
+      if (e.toString().contains('already exists')) {
+        print('$adType ad already exists, skipping load');
+        return;
+      }
+      print('Error loading $adType ad: $e');
     }
   }
 
