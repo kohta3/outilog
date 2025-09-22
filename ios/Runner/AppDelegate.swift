@@ -9,9 +9,6 @@ import FirebaseCrashlytics
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Firebase初期化
-    FirebaseApp.configure()
-    
     // Crashlytics初期化
     #if !DEBUG
     Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
