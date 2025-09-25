@@ -58,9 +58,9 @@
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>このアプリは通知を送信するために通知の許可が必要です。</string>
 	<key>NSCameraUsageDescription</key>
-	<string>このアプリは写真を撮影するためにカメラの許可が必要です。</string>
+	<string>おうちログは、プロフィール画像の設定、スペースのヘッダー画像の設定、バグレポート用の画像添付のためにカメラを使用します。例えば、アカウント作成時にプロフィール写真を撮影したり、スペースの背景画像を設定する際にカメラで撮影した画像を使用します。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>このアプリは写真を選択するためにフォトライブラリの許可が必要です。</string>
+	<string>おうちログは、プロフィール画像の設定、スペースのヘッダー画像の設定、バグレポート用の画像添付のためにフォトライブラリにアクセスします。例えば、既存の写真からプロフィール画像を選択したり、ギャラリーから背景画像を選択する際に使用します。</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-6529629959594411~2628276458</string>
 	<key>UIRequiresFullScreen</key>
