@@ -7,6 +7,7 @@ import 'package:outi_log/models/schedule_model.dart';
 import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/view/component/schedule/week_schadule_component.dart';
 import 'package:outi_log/view/component/schedule/dialog_component.dart';
+import 'package:outi_log/utils/analytics_mixin.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key});
@@ -15,7 +16,8 @@ class ScheduleScreen extends ConsumerStatefulWidget {
   ConsumerState<ScheduleScreen> createState() => _ScheduleScreenState();
 }
 
-class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
+class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
+    with AnalyticsMixin {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
@@ -27,6 +29,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(scheduleFirestoreProvider.notifier).reloadSchedules();
     });
+
+    // スケジュール画面の表示を追跡
+    trackScreenView('schedule_screen');
   }
 
   // getSchedulesForDayをbuildメソッドの外に移動

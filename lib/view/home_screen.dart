@@ -16,6 +16,7 @@ import 'package:outi_log/view/household_budget.dart';
 import 'package:outi_log/view/schedule_screen.dart';
 import 'package:outi_log/view/shopping_list.dart';
 import 'package:outi_log/view/space_add_screen.dart';
+import 'package:outi_log/utils/analytics_mixin.dart';
 import 'package:provider/provider.dart' as provider_package;
 
 // 画面下部のナビゲーションの状態を管理するProvider
@@ -28,7 +29,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with AnalyticsMixin {
   static const List<Widget> _screens = [
     DashboardScreen(),
     ScheduleScreen(),
@@ -40,6 +41,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _initializeSpace();
+    // ホーム画面の表示を追跡
+    trackScreenView('home_screen');
   }
 
   Future<void> _initializeSpace() async {
@@ -109,6 +112,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  /// タブ切り替え時の画面遷移を追跡
+  void _trackTabChange(int index) {
+    String screenName;
+    switch (index) {
+      case 0:
+        screenName = 'dashboard_screen';
+        break;
+      case 1:
+        screenName = 'schedule_screen';
+        break;
+      case 2:
+        screenName = 'household_budget_screen';
+        break;
+      case 3:
+        screenName = 'shopping_list_screen';
+        break;
+      default:
+        screenName = 'unknown_screen';
+    }
+    trackScreenView(screenName);
+
+    // テスト用: タブ切り替えイベントも送信
+    trackEvent('tab_switch', parameters: {
+      'tab_index': index,
+      'screen_name': screenName,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(homeScreenIndexProvider);
@@ -170,6 +201,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     currentIndex: selectedIndex,
                     onTap: (index) {
                       ref.read(homeScreenIndexProvider.notifier).state = index;
+                      // タブ切り替え時の画面遷移を追跡
+                      _trackTabChange(index);
                     },
                     selectedItemColor: themeColor,
                     unselectedItemColor: Colors.grey,

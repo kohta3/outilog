@@ -10,8 +10,8 @@ import 'package:outi_log/view/space_add_screen.dart';
 import 'package:outi_log/view/component/advertisement/native_ad_widget.dart';
 import 'package:outi_log/utils/format.dart';
 import 'package:outi_log/models/space_model.dart';
-import 'package:outi_log/services/analytics_service.dart';
 import 'package:outi_log/utils/image_optimizer.dart';
+import 'package:outi_log/utils/analytics_mixin.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -20,7 +20,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with AnalyticsMixin {
   final TransactionFirestoreInfrastructure _transactionInfrastructure =
       TransactionFirestoreInfrastructure();
 
@@ -36,9 +37,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // スケジュールの初期化を追加
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeSchedules();
-      // ダッシュボード画面の表示を記録
-      AnalyticsService().logScreenView(screenName: 'dashboard');
     });
+
+    // ダッシュボード画面の表示を記録
+    trackScreenView('dashboard_screen');
   }
 
   Future<void> _loadDashboardData() async {

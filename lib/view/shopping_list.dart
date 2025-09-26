@@ -6,6 +6,7 @@ import 'package:outi_log/view/component/shopping_list/add_group_bottom_sheet.dar
 import 'package:outi_log/view/component/shopping_list/add_item_bottom_sheet.dart';
 import 'package:outi_log/view/component/advertisement/native_ad_widget.dart';
 import 'package:outi_log/models/shopping_list_model.dart';
+import 'package:outi_log/utils/analytics_mixin.dart';
 
 class ShoppingListScreen extends ConsumerStatefulWidget {
   const ShoppingListScreen({super.key});
@@ -14,7 +15,8 @@ class ShoppingListScreen extends ConsumerStatefulWidget {
   ConsumerState<ShoppingListScreen> createState() => _ShoppingListScreenState();
 }
 
-class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
+class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen>
+    with AnalyticsMixin {
   final Map<String, bool> _expandedGroups = {};
   bool _isEditMode = false;
 
@@ -25,6 +27,9 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(shoppingListProvider.notifier).loadGroups();
     });
+
+    // 買い物リスト画面の表示を追跡
+    trackScreenView('shopping_list_screen');
   }
 
   @override

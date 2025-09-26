@@ -17,13 +17,11 @@ class AnalyticsService {
 
     _analytics = FirebaseAnalytics.instance;
 
-    // デバッグ時はデータ収集を無効化
+    // デバッグ時はデータ収集を無効化（本番環境では有効化）
     if (kDebugMode) {
       await _analytics!.setAnalyticsCollectionEnabled(false);
-      debugPrint('Firebase Analytics: デバッグモードのためデータ収集を無効化');
     } else {
       await _analytics!.setAnalyticsCollectionEnabled(true);
-      debugPrint('Firebase Analytics: データ収集を有効化');
     }
 
     _isInitialized = true;
@@ -39,8 +37,12 @@ class AnalyticsService {
     required String name,
     Map<String, Object>? parameters,
   }) async {
+    // 初期化されていない場合は初期化を待つ
+    if (!_isInitialized) {
+      await initialize();
+    }
+
     if (!isDataCollectionEnabled) {
-      debugPrint('Firebase Analytics: データ収集が無効のためイベントを送信しません - $name');
       return;
     }
 
@@ -60,6 +62,12 @@ class AnalyticsService {
     required String name,
     required String? value,
   }) async {
+    // 初期化されていない場合は初期化を待つ
+    if (!_isInitialized) {
+      debugPrint('Firebase Analytics: 初期化中... ユーザープロパティをキューに追加 - $name');
+      await initialize();
+    }
+
     if (!isDataCollectionEnabled) {
       debugPrint('Firebase Analytics: データ収集が無効のためユーザープロパティを設定しません - $name');
       return;
@@ -75,6 +83,12 @@ class AnalyticsService {
 
   /// ユーザーIDを設定
   Future<void> setUserId(String? userId) async {
+    // 初期化されていない場合は初期化を待つ
+    if (!_isInitialized) {
+      debugPrint('Firebase Analytics: 初期化中... ユーザーIDをキューに追加');
+      await initialize();
+    }
+
     if (!isDataCollectionEnabled) {
       debugPrint('Firebase Analytics: データ収集が無効のためユーザーIDを設定しません');
       return;
@@ -96,8 +110,8 @@ class AnalyticsService {
     await logEvent(
       name: 'screen_view',
       parameters: {
-        'firebase_screen': screenName,
-        'firebase_screen_class': screenClass ?? screenName,
+        'screen_name': screenName,
+        'screen_class': screenClass ?? screenName,
       },
     );
   }

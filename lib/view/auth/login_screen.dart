@@ -13,6 +13,7 @@ import 'package:outi_log/view/auth/forgot_password_screen.dart';
 import 'package:outi_log/view/component/common.dart';
 import 'package:outi_log/services/analytics_service.dart';
 import 'package:outi_log/services/remote_notification_service.dart';
+import 'package:outi_log/utils/analytics_mixin.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -21,7 +22,7 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> with AnalyticsMixin {
   late final AuthController _authController;
 
   final _emailController = TextEditingController();
@@ -42,9 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
 
     // ログイン画面の表示を記録
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AnalyticsService().logScreenView(screenName: 'login');
-    });
+    trackScreenView('login_screen');
   }
 
   @override
