@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:holiday_jp/holiday_jp.dart' as holiday_jp;
 import 'package:outi_log/models/schedule_model.dart';
 import 'package:outi_log/constant/color.dart';
+import 'package:outi_log/view/component/schedule/schedule_copy_dialog.dart';
 
 // モダンなデザイン要素とカラーパレット
 class _UIConstants {
@@ -604,7 +605,7 @@ class _WeekSchaduleComponentState extends State<WeekSchaduleComponent> {
               ),
             ],
             const SizedBox(height: 24),
-            // 編集・削除ボタン
+            // 編集・コピー・削除ボタン
             if (widget.onEditSchedule != null ||
                 widget.onDeleteSchedule != null)
               Row(
@@ -626,9 +627,43 @@ class _WeekSchaduleComponentState extends State<WeekSchaduleComponent> {
                         ),
                       ),
                     ),
-                  if (widget.onEditSchedule != null &&
-                      widget.onDeleteSchedule != null)
-                    const SizedBox(width: 12),
+                  if (widget.onEditSchedule != null) const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                        _showCopyDialog(context, schedule);
+                      },
+                      icon: const Icon(Icons.copy, size: 18),
+                      label: const Text('コピー'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green,
+                        side: const BorderSide(color: Colors.green),
+                      ),
+                    ),
+                  ),
+                  if (schedule.copyGroupId != null) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                          _showBulkDeleteDialog(context, schedule);
+                        },
+                        icon: const Icon(Icons.delete_sweep, size: 18),
+                        label: const Text('一括削除'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orange,
+                          side: const BorderSide(color: Colors.orange),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (widget.onDeleteSchedule != null) const SizedBox(width: 8),
                   if (widget.onDeleteSchedule != null)
                     Expanded(
                       child: OutlinedButton.icon(
@@ -650,6 +685,56 @@ class _WeekSchaduleComponentState extends State<WeekSchaduleComponent> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  // コピーダイアログを表示
+  void _showCopyDialog(BuildContext context, ScheduleModel schedule) {
+    showDialog(
+      context: context,
+      builder: (context) => ScheduleCopyDialog(
+        schedule: schedule,
+      ),
+    );
+  }
+
+  // 一括削除ダイアログを表示
+  void _showBulkDeleteDialog(BuildContext context, ScheduleModel schedule) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('グループ一括削除'),
+        content: Text(
+            '「${schedule.title}」のコピーグループ（${schedule.copyGroupId}）を一括削除しますか？\n\nこの操作は元に戻せません。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _bulkDeleteScheduleGroup(context, schedule.copyGroupId!);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('一括削除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // スケジュールグループを一括削除
+  Future<void> _bulkDeleteScheduleGroup(
+      BuildContext context, String copyGroupId) async {
+    // プロバイダーを使用して一括削除を実行
+    // 注意: この部分は実際のプロバイダー実装に依存します
+    // ここでは簡易的な実装とします
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('一括削除機能は実装中です'),
+        backgroundColor: Colors.orange,
       ),
     );
   }

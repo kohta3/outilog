@@ -7,6 +7,7 @@ import 'package:outi_log/models/schedule_model.dart';
 import 'package:outi_log/constant/color.dart';
 import 'package:outi_log/view/component/schedule/week_schadule_component.dart';
 import 'package:outi_log/view/component/schedule/dialog_component.dart';
+import 'package:outi_log/view/component/schedule/schedule_copy_dialog.dart';
 import 'package:outi_log/utils/analytics_mixin.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
@@ -225,7 +226,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
                                       dayTextColor: Colors.white,
                                       isBold: true,
                                       onEditSchedule: _editSchedule,
+                                      onCopySchedule: _copySchedule,
                                       onDeleteSchedule: _deleteSchedule,
+                                      onBulkDeleteSchedule:
+                                          _showBulkDeleteDialog,
                                     ),
                                   ],
                                 );
@@ -250,7 +254,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
                                       dayTextColor: _getTextColorForDay(day),
                                       isBold: true,
                                       onEditSchedule: _editSchedule,
+                                      onCopySchedule: _copySchedule,
                                       onDeleteSchedule: _deleteSchedule,
+                                      onBulkDeleteSchedule:
+                                          _showBulkDeleteDialog,
                                     ),
                                   ],
                                 );
@@ -261,7 +268,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
                                   schedules: _getSchedulesForDay(day),
                                   dayTextColor: _getTextColorForDay(day),
                                   onEditSchedule: _editSchedule,
+                                  onCopySchedule: _copySchedule,
                                   onDeleteSchedule: _deleteSchedule,
+                                  onBulkDeleteSchedule: _showBulkDeleteDialog,
                                 );
                               },
                               outsideBuilder: (context, day, focusedDay) {
@@ -271,7 +280,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
                                   dayTextColor:
                                       _getTextColorForDay(day, isOutside: true),
                                   onEditSchedule: _editSchedule,
+                                  onCopySchedule: _copySchedule,
                                   onDeleteSchedule: _deleteSchedule,
+                                  onBulkDeleteSchedule: _showBulkDeleteDialog,
                                 );
                               },
                               holidayBuilder: (context, day, focusedDay) {
@@ -281,7 +292,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
                                   dayTextColor: Colors.red[600]!,
                                   isBold: true,
                                   onEditSchedule: _editSchedule,
+                                  onCopySchedule: _copySchedule,
                                   onDeleteSchedule: _deleteSchedule,
+                                  onBulkDeleteSchedule: _showBulkDeleteDialog,
                                 );
                               },
                             ),
@@ -347,6 +360,69 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen>
     );
   }
 
+  // スケジュールコピー
+  void _copySchedule(ScheduleModel schedule) async {
+    await showDialog(
+      context: context,
+      builder: (context) => ScheduleCopyDialog(
+        schedule: schedule,
+      ),
+    );
+  }
+
+  // 一括削除ダイアログを表示
+  void _showBulkDeleteDialog(ScheduleModel schedule) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('グループ一括削除'),
+        content: Text(
+            '「${schedule.title}」のコピーグループ（${schedule.copyGroupId}）を一括削除しますか？\n\nこの操作は元に戻せません。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _bulkDeleteScheduleGroup(schedule.copyGroupId!);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('一括削除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // スケジュールグループを一括削除
+  Future<void> _bulkDeleteScheduleGroup(String copyGroupId) async {
+    final success = await ref
+        .read(scheduleFirestoreProvider.notifier)
+        .deleteScheduleGroup(copyGroupId);
+
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('グループを一括削除しました'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('グループの一括削除に失敗しました'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // スケジュール削除
   void _deleteSchedule(ScheduleModel schedule) async {
     final confirmed = await showDialog<bool>(
@@ -403,14 +479,18 @@ class _DayCellContent extends StatelessWidget {
   final Color dayTextColor;
   final bool isBold;
   final Function(ScheduleModel) onEditSchedule;
+  final Function(ScheduleModel) onCopySchedule;
   final Function(ScheduleModel) onDeleteSchedule;
+  final Function(ScheduleModel)? onBulkDeleteSchedule;
 
   const _DayCellContent({
     required this.day,
     required this.schedules,
     required this.dayTextColor,
     required this.onEditSchedule,
+    required this.onCopySchedule,
     required this.onDeleteSchedule,
+    this.onBulkDeleteSchedule,
     this.isBold = false,
   });
 
@@ -425,7 +505,9 @@ class _DayCellContent extends StatelessWidget {
             builder: (context) => _RealtimeScheduleBottomSheet(
                   day: day,
                   onEditSchedule: onEditSchedule,
+                  onCopySchedule: onCopySchedule,
                   onDeleteSchedule: onDeleteSchedule,
+                  onBulkDeleteSchedule: onBulkDeleteSchedule,
                 ));
       },
       child: SizedBox(
@@ -481,12 +563,16 @@ class _DayCellContent extends StatelessWidget {
 class _RealtimeScheduleBottomSheet extends ConsumerWidget {
   final DateTime day;
   final Function(ScheduleModel) onEditSchedule;
+  final Function(ScheduleModel) onCopySchedule;
   final Function(ScheduleModel) onDeleteSchedule;
+  final Function(ScheduleModel)? onBulkDeleteSchedule;
 
   const _RealtimeScheduleBottomSheet({
     required this.day,
     required this.onEditSchedule,
+    required this.onCopySchedule,
     required this.onDeleteSchedule,
+    this.onBulkDeleteSchedule,
   });
 
   @override
@@ -549,7 +635,9 @@ class _RealtimeScheduleBottomSheet extends ConsumerWidget {
                 .map((schedule) => _ScheduleListItem(
                       schedule: schedule,
                       onEdit: () => onEditSchedule(schedule),
+                      onCopy: () => onCopySchedule(schedule),
                       onDelete: () => onDeleteSchedule(schedule),
+                      onBulkDelete: onBulkDeleteSchedule,
                     ))
                 .toList(),
           const SizedBox(height: 16),
@@ -634,12 +722,16 @@ class _MultiDayScheduleLabel extends StatelessWidget {
 class _ScheduleListItem extends StatelessWidget {
   final ScheduleModel schedule;
   final VoidCallback onEdit;
+  final VoidCallback onCopy;
   final VoidCallback onDelete;
+  final Function(ScheduleModel)? onBulkDelete;
 
   const _ScheduleListItem({
     required this.schedule,
     required this.onEdit,
+    required this.onCopy,
     required this.onDelete,
+    this.onBulkDelete,
   });
 
   Color _parseColor(String? colorString) {
@@ -769,6 +861,27 @@ class _ScheduleListItem extends StatelessWidget {
                 onEdit();
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.copy, color: Colors.green),
+              title: const Text('コピー'),
+              onTap: () {
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+                onCopy();
+              },
+            ),
+            if (schedule.copyGroupId != null)
+              ListTile(
+                leading: const Icon(Icons.delete_sweep, color: Colors.orange),
+                title: const Text('グループ一括削除'),
+                onTap: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                  onBulkDelete?.call(schedule);
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('削除'),

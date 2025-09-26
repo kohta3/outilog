@@ -60,6 +60,7 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
     bool twelveHoursBefore = false,
     bool oneDayBefore = false,
     Map<String, bool> participationList = const {},
+    String? copyGroupId,
   }) async {
     if (_spaceId == null || _userId == null) {
       print('DEBUG: Cannot add schedule - missing spaceId or userId');
@@ -86,6 +87,7 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
         twelveHoursBefore: twelveHoursBefore,
         oneDayBefore: oneDayBefore,
         participationList: participationList,
+        copyGroupId: copyGroupId,
       );
 
       if (scheduleId != null) {
@@ -217,6 +219,30 @@ class ScheduleFirestoreNotifier extends StateNotifier<List<ScheduleModel>> {
       return success;
     } catch (e) {
       print('DEBUG: Error deleting schedule: $e');
+      return false;
+    }
+  }
+
+  /// コピーグループのスケジュールを一括削除
+  Future<bool> deleteScheduleGroup(String copyGroupId) async {
+    if (_spaceId == null || _userId == null) return false;
+
+    try {
+      print('DEBUG: Deleting schedule group: $copyGroupId');
+      final success = await _repo.deleteScheduleGroup(
+        copyGroupId: copyGroupId,
+        spaceId: _spaceId,
+        userId: _userId,
+      );
+
+      if (success) {
+        await _loadSchedules(); // 再読み込み
+        print('DEBUG: Schedule group deleted successfully');
+      }
+
+      return success;
+    } catch (e) {
+      print('DEBUG: Error deleting schedule group: $e');
       return false;
     }
   }

@@ -73,6 +73,7 @@ class ScheduleFirestoreInfrastructure {
     bool twelveHoursBefore = false,
     bool oneDayBefore = false,
     Map<String, bool> participationList = const {},
+    String? copyGroupId,
   }) async {
     try {
       final scheduleRef = _firestore.collection(_schedulesCollection).doc();
@@ -101,6 +102,8 @@ class ScheduleFirestoreInfrastructure {
         'one_day_before': oneDayBefore,
         // 参加ユーザーリスト
         'participation_list': participationList,
+        // コピーグループID
+        'copy_group_id': copyGroupId,
       });
 
       return scheduleRef.id;
@@ -220,6 +223,42 @@ class ScheduleFirestoreInfrastructure {
       return true;
     } catch (e) {
       throw Exception('スケジュールの削除に失敗しました: $e');
+    }
+  }
+
+  /// コピーグループのスケジュールを一括削除
+  Future<bool> deleteScheduleGroup({
+    required String copyGroupId,
+    required String spaceId,
+    required String userId,
+  }) async {
+    try {
+      // コピーグループのスケジュールを取得
+      final query = await _firestore
+          .collection(_schedulesCollection)
+          .where('space_id', isEqualTo: spaceId)
+          .where('copy_group_id', isEqualTo: copyGroupId)
+          .where('is_active', isEqualTo: true)
+          .get();
+
+      if (query.docs.isEmpty) {
+        throw Exception('削除対象のスケジュールが見つかりません');
+      }
+
+      // バッチ処理で一括削除
+      final batch = _firestore.batch();
+      for (final doc in query.docs) {
+        batch.update(doc.reference, {
+          'is_active': false,
+          'deleted_at': FieldValue.serverTimestamp(),
+          'deleted_by': userId,
+        });
+      }
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      throw Exception('スケジュールグループの削除に失敗しました: $e');
     }
   }
 

@@ -15,6 +15,7 @@ class ScheduleModel {
   final bool twelveHoursBefore;
   final bool oneDayBefore;
   final Map<String, bool> participationList;
+  final String? copyGroupId; // コピーグループID（一括削除用）
   final DateTime? createdAt;
   final DateTime? updatedAt;
   ScheduleModel({
@@ -34,6 +35,7 @@ class ScheduleModel {
     required this.twelveHoursBefore,
     required this.oneDayBefore,
     required this.participationList,
+    this.copyGroupId, // コピーグループID
     this.createdAt,
     this.updatedAt,
   });
@@ -55,6 +57,7 @@ class ScheduleModel {
       twelveHoursBefore: json['twelveHoursBefore'],
       oneDayBefore: json['oneDayBefore'],
       participationList: Map<String, bool>.from(json['participationList']),
+      copyGroupId: json['copyGroupId'],
       createdAt: json['createdAt'].toDate(),
       updatedAt: json['updatedAt'].toDate(),
     );
@@ -80,6 +83,7 @@ class ScheduleModel {
       oneDayBefore: data['one_day_before'] ?? false,
       participationList:
           Map<String, bool>.from(data['participation_list'] ?? {}),
+      copyGroupId: data['copy_group_id'],
       createdAt: (data['created_at'] as dynamic)?.toDate(),
       updatedAt: (data['updated_at'] as dynamic)?.toDate(),
     );
@@ -102,6 +106,7 @@ class ScheduleModel {
       'twelveHoursBefore': twelveHoursBefore,
       'oneDayBefore': oneDayBefore,
       'participationList': participationList,
+      'copyGroupId': copyGroupId,
       'createdAt': DateTime.now(),
       'updatedAt': DateTime.now(),
     };

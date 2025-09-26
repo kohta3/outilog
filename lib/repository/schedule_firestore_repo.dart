@@ -59,6 +59,7 @@ class ScheduleFirestoreRepo {
     bool twelveHoursBefore = false,
     bool oneDayBefore = false,
     Map<String, bool> participationList = const {},
+    String? copyGroupId,
   }) async {
     try {
       final scheduleId = await _infrastructure.addSchedule(
@@ -79,6 +80,7 @@ class ScheduleFirestoreRepo {
         twelveHoursBefore: twelveHoursBefore,
         oneDayBefore: oneDayBefore,
         participationList: participationList,
+        copyGroupId: copyGroupId,
       );
       return scheduleId;
     } catch (e) {
@@ -149,6 +151,24 @@ class ScheduleFirestoreRepo {
       );
     } catch (e) {
       print('DEBUG: Error deleting schedule: $e');
+      return false;
+    }
+  }
+
+  /// コピーグループのスケジュールを一括削除
+  Future<bool> deleteScheduleGroup({
+    required String copyGroupId,
+    required String spaceId,
+    required String userId,
+  }) async {
+    try {
+      return await _infrastructure.deleteScheduleGroup(
+        copyGroupId: copyGroupId,
+        spaceId: spaceId,
+        userId: userId,
+      );
+    } catch (e) {
+      print('DEBUG: Error deleting schedule group: $e');
       return false;
     }
   }
