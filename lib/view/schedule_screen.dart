@@ -422,55 +422,11 @@ class _DayCellContent extends StatelessWidget {
         await showModalBottomSheet(
             context: context,
             isScrollControlled: true,
-            builder: (context) => Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${day.month}月${day.day}日の予定',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (schedules.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        child: Text(
-                          '予定はありません',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    else
-                      ...schedules
-                          .map((schedule) => _ScheduleListItem(
-                                schedule: schedule,
-                                onEdit: () => onEditSchedule(schedule),
-                                onDelete: () => onDeleteSchedule(schedule),
-                              ))
-                          .toList(),
-                    const SizedBox(height: 16),
-                  ],
-                )));
+            builder: (context) => _RealtimeScheduleBottomSheet(
+                  day: day,
+                  onEditSchedule: onEditSchedule,
+                  onDeleteSchedule: onDeleteSchedule,
+                ));
       },
       child: SizedBox(
         width: double.infinity,
@@ -516,6 +472,88 @@ class _DayCellContent extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// リアルタイムでスケジュールを更新するボトムアップシート
+class _RealtimeScheduleBottomSheet extends ConsumerWidget {
+  final DateTime day;
+  final Function(ScheduleModel) onEditSchedule;
+  final Function(ScheduleModel) onDeleteSchedule;
+
+  const _RealtimeScheduleBottomSheet({
+    required this.day,
+    required this.onEditSchedule,
+    required this.onDeleteSchedule,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // スケジュールプロバイダーを監視
+    final schedules = ref.watch(scheduleFirestoreProvider);
+
+    // 指定された日のスケジュールを取得
+    final daySchedules = schedules.where((schedule) {
+      final dayStart = DateTime(day.year, day.month, day.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+
+      if (schedule.isAllDay) {
+        return DateUtils.isSameDay(schedule.startDateTime, day);
+      }
+      return schedule.startDateTime.isBefore(dayEnd) &&
+          schedule.endDateTime.isAfter(dayStart);
+    }).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${day.month}月${day.day}日の予定',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (daySchedules.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                '予定はありません',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            ...daySchedules
+                .map((schedule) => _ScheduleListItem(
+                      schedule: schedule,
+                      onEdit: () => onEditSchedule(schedule),
+                      onDelete: () => onDeleteSchedule(schedule),
+                    ))
+                .toList(),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
@@ -735,9 +773,11 @@ class _ScheduleListItem extends StatelessWidget {
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('削除'),
               onTap: () {
+                // アクションメニューを閉じる
                 if (Navigator.canPop(context)) {
                   Navigator.pop(context);
                 }
+                // 削除処理を実行
                 onDelete();
               },
             ),

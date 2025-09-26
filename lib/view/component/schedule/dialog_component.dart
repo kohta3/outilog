@@ -60,6 +60,7 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
   bool twelveHoursBefore = false;
   bool oneDayBefore = false;
   Map<String, bool> participationList = {};
+  bool _isLoading = false; // ローディング状態を追加
 
   final titleController = TextEditingController();
   final memoController = TextEditingController();
@@ -864,210 +865,248 @@ class _DialogComponentState extends ConsumerState<DialogComponent> {
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton(
-                onPressed: () async {
-                  if (titleController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('タイトルを入力してください'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (_isLoading) return; // 既に処理中の場合は何もしない
 
-                  // 終了日時が開始日時より前でないかチェック
-                  if (endDateTime.isBefore(startDateTime)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('終了日時は開始日時より後に設定してください'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
+                        setState(() {
+                          _isLoading = true;
+                        });
 
-                  final currentSpace =
-                      ref.read(firestoreSpacesProvider)?.currentSpace;
-                  final currentUser = ref.read(currentUserProvider);
+                        try {
+                          if (titleController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('タイトルを入力してください'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            setState(() {
+                              _isLoading = false;
+                            });
+                            return;
+                          }
 
-                  if (currentSpace == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('スペースが選択されていません'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
+                          // 終了日時が開始日時より前でないかチェック
+                          if (endDateTime.isBefore(startDateTime)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('終了日時は開始日時より後に設定してください'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            setState(() {
+                              _isLoading = false;
+                            });
+                            return;
+                          }
 
-                  if (currentUser == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('ログインが必要です'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
+                          final currentSpace =
+                              ref.read(firestoreSpacesProvider)?.currentSpace;
+                          final currentUser = ref.read(currentUserProvider);
 
-                  try {
-                    // デバッグ用：参加メンバーの状態をログ出力
-                    print(
-                        'DEBUG: Saving schedule with participation list: $participationList');
+                          if (currentSpace == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('スペースが選択されていません'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            setState(() {
+                              _isLoading = false;
+                            });
+                            return;
+                          }
 
-                    bool success = false;
+                          if (currentUser == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('ログインが必要です'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            setState(() {
+                              _isLoading = false;
+                            });
+                            return;
+                          }
+                          // デバッグ用：参加メンバーの状態をログ出力
+                          print(
+                              'DEBUG: Saving schedule with participation list: $participationList');
 
-                    if (widget.initialSchedule != null) {
-                      // 編集モード - 予定を更新
-                      success = await ref
-                          .read(scheduleFirestoreProvider.notifier)
-                          .updateSchedule(
-                            scheduleId: widget.initialSchedule!.id!,
-                            title: titleController.text.trim(),
-                            description: memoController.text.trim(),
-                            startTime: startDateTime,
-                            endTime: endDateTime,
-                            color: _colorToHex(selectedColor),
-                            isAllDay: isAllDay,
-                            fiveMinutesBefore: fiveMinutesBefore,
-                            tenMinutesBefore: tenMinutesBefore,
-                            thirtyMinutesBefore: thirtyMinutesBefore,
-                            oneHourBefore: oneHourBefore,
-                            threeHoursBefore: threeHoursBefore,
-                            sixHoursBefore: sixHoursBefore,
-                            twelveHoursBefore: twelveHoursBefore,
-                            oneDayBefore: oneDayBefore,
-                            participationList: participationList,
-                          );
-                    } else {
-                      // 新規作成モード - 予定を追加
-                      success = await ref
-                          .read(scheduleFirestoreProvider.notifier)
-                          .addSchedule(
-                            title: titleController.text.trim(),
-                            description: memoController.text.trim(),
-                            startTime: startDateTime,
-                            endTime: endDateTime,
-                            color: _colorToHex(selectedColor),
-                            isAllDay: isAllDay,
-                            fiveMinutesBefore: fiveMinutesBefore,
-                            tenMinutesBefore: tenMinutesBefore,
-                            thirtyMinutesBefore: thirtyMinutesBefore,
-                            oneHourBefore: oneHourBefore,
-                            threeHoursBefore: threeHoursBefore,
-                            sixHoursBefore: sixHoursBefore,
-                            twelveHoursBefore: twelveHoursBefore,
-                            oneDayBefore: oneDayBefore,
-                            participationList: participationList,
-                          );
-                    }
+                          bool success = false;
 
-                    if (success) {
-                      // スケジュール作成成功時にAnalyticsイベントを記録
-                      if (widget.initialSchedule == null) {
-                        AnalyticsService().logScheduleCreate(
-                          eventType: isAllDay ? 'all_day' : 'timed',
-                        );
-                      }
+                          if (widget.initialSchedule != null) {
+                            // 編集モード - 予定を更新
+                            success = await ref
+                                .read(scheduleFirestoreProvider.notifier)
+                                .updateSchedule(
+                                  scheduleId: widget.initialSchedule!.id!,
+                                  title: titleController.text.trim(),
+                                  description: memoController.text.trim(),
+                                  startTime: startDateTime,
+                                  endTime: endDateTime,
+                                  color: _colorToHex(selectedColor),
+                                  isAllDay: isAllDay,
+                                  fiveMinutesBefore: fiveMinutesBefore,
+                                  tenMinutesBefore: tenMinutesBefore,
+                                  thirtyMinutesBefore: thirtyMinutesBefore,
+                                  oneHourBefore: oneHourBefore,
+                                  threeHoursBefore: threeHoursBefore,
+                                  sixHoursBefore: sixHoursBefore,
+                                  twelveHoursBefore: twelveHoursBefore,
+                                  oneDayBefore: oneDayBefore,
+                                  participationList: participationList,
+                                );
+                          } else {
+                            // 新規作成モード - 予定を追加
+                            success = await ref
+                                .read(scheduleFirestoreProvider.notifier)
+                                .addSchedule(
+                                  title: titleController.text.trim(),
+                                  description: memoController.text.trim(),
+                                  startTime: startDateTime,
+                                  endTime: endDateTime,
+                                  color: _colorToHex(selectedColor),
+                                  isAllDay: isAllDay,
+                                  fiveMinutesBefore: fiveMinutesBefore,
+                                  tenMinutesBefore: tenMinutesBefore,
+                                  thirtyMinutesBefore: thirtyMinutesBefore,
+                                  oneHourBefore: oneHourBefore,
+                                  threeHoursBefore: threeHoursBefore,
+                                  sixHoursBefore: sixHoursBefore,
+                                  twelveHoursBefore: twelveHoursBefore,
+                                  oneDayBefore: oneDayBefore,
+                                  participationList: participationList,
+                                );
+                          }
 
-                      // 通知をスケジュール
-                      final notificationService =
-                          ref.read(notificationServiceProvider);
-                      final notificationSettings = {
-                        'fiveMinutesBefore': fiveMinutesBefore,
-                        'tenMinutesBefore': tenMinutesBefore,
-                        'thirtyMinutesBefore': thirtyMinutesBefore,
-                        'oneHourBefore': oneHourBefore,
-                        'threeHoursBefore': threeHoursBefore,
-                        'sixHoursBefore': sixHoursBefore,
-                        'twelveHoursBefore': twelveHoursBefore,
-                        'oneDayBefore': oneDayBefore,
-                      };
+                          if (success) {
+                            // スケジュール作成成功時にAnalyticsイベントを記録
+                            if (widget.initialSchedule == null) {
+                              AnalyticsService().logScheduleCreate(
+                                eventType: isAllDay ? 'all_day' : 'timed',
+                              );
+                            }
 
-                      // スケジュールIDを取得（新規作成の場合は最新のスケジュールから取得）
-                      String scheduleId = widget.initialSchedule?.id ?? '';
-                      if (scheduleId.isEmpty) {
-                        // 新規作成の場合、最新のスケジュールからIDを取得
-                        final schedules = ref
-                            .read(scheduleFirestoreProvider.notifier)
-                            .getSchedulesForDate(startDateTime);
-                        if (schedules.isNotEmpty) {
-                          scheduleId = schedules.last.id ?? '';
-                        }
-                      }
+                            // 通知をスケジュール
+                            final notificationService =
+                                ref.read(notificationServiceProvider);
+                            final notificationSettings = {
+                              'fiveMinutesBefore': fiveMinutesBefore,
+                              'tenMinutesBefore': tenMinutesBefore,
+                              'thirtyMinutesBefore': thirtyMinutesBefore,
+                              'oneHourBefore': oneHourBefore,
+                              'threeHoursBefore': threeHoursBefore,
+                              'sixHoursBefore': sixHoursBefore,
+                              'twelveHoursBefore': twelveHoursBefore,
+                              'oneDayBefore': oneDayBefore,
+                            };
 
-                      if (scheduleId.isNotEmpty) {
-                        await notificationService
-                            .scheduleNotificationsForSchedule(
-                          scheduleId: scheduleId,
-                          title: titleController.text.trim(),
-                          startTime: startDateTime,
-                          notificationSettings: notificationSettings,
-                          spaceId: currentSpace.id, // スペースIDを追加
-                        );
+                            // スケジュールIDを取得（新規作成の場合は最新のスケジュールから取得）
+                            String scheduleId =
+                                widget.initialSchedule?.id ?? '';
+                            if (scheduleId.isEmpty) {
+                              // 新規作成の場合、最新のスケジュールからIDを取得
+                              final schedules = ref
+                                  .read(scheduleFirestoreProvider.notifier)
+                                  .getSchedulesForDate(startDateTime);
+                              if (schedules.isNotEmpty) {
+                                scheduleId = schedules.last.id ?? '';
+                              }
+                            }
 
-                        // 新規作成の場合、スペース参加ユーザーにスケジュール作成通知を送信
-                        if (widget.initialSchedule == null) {
-                          final userNotificationSettings =
+                            if (scheduleId.isNotEmpty) {
                               await notificationService
-                                  .getNotificationSettings();
-                          if (userNotificationSettings[
-                                  'scheduleNotifications'] ==
-                              true) {
-                            final remoteNotificationService =
-                                RemoteNotificationService();
-                            await remoteNotificationService
-                                .sendScheduleCreatedNotification(
-                              spaceId: currentSpace.id,
-                              scheduleId: scheduleId,
-                              scheduleTitle: titleController.text.trim(),
-                              createdByUserName: currentUser.displayName ??
-                                  currentUser.email ??
-                                  'ユーザー',
+                                  .scheduleNotificationsForSchedule(
+                                scheduleId: scheduleId,
+                                title: titleController.text.trim(),
+                                startTime: startDateTime,
+                                notificationSettings: notificationSettings,
+                                spaceId: currentSpace.id, // スペースIDを追加
+                              );
+
+                              // 新規作成の場合、スペース参加ユーザーにスケジュール作成通知を送信
+                              if (widget.initialSchedule == null) {
+                                final userNotificationSettings =
+                                    await notificationService
+                                        .getNotificationSettings();
+                                if (userNotificationSettings[
+                                        'scheduleNotifications'] ==
+                                    true) {
+                                  final remoteNotificationService =
+                                      RemoteNotificationService();
+                                  await remoteNotificationService
+                                      .sendScheduleCreatedNotification(
+                                    spaceId: currentSpace.id,
+                                    scheduleId: scheduleId,
+                                    scheduleTitle: titleController.text.trim(),
+                                    createdByUserName:
+                                        currentUser.displayName ??
+                                            currentUser.email ??
+                                            'ユーザー',
+                                  );
+                                }
+                              }
+                            }
+
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(widget.initialSchedule != null
+                                    ? '予定を更新しました'
+                                    : '予定を追加しました'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            // カレンダー表示を強制更新
+                            if (mounted) {
+                              setState(() {});
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(widget.initialSchedule != null
+                                    ? '予定の更新に失敗しました'
+                                    : '予定の追加に失敗しました'),
+                                backgroundColor: Colors.red,
+                              ),
                             );
                           }
+                        } catch (e) {
+                          print(
+                              'DEBUG: Error ${widget.initialSchedule != null ? 'updating' : 'adding'} schedule: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('エラーが発生しました: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        } finally {
+                          // ローディング状態をリセット
+                          if (mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                          }
                         }
-                      }
-
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(widget.initialSchedule != null
-                              ? '予定を更新しました'
-                              : '予定を追加しました'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                      // カレンダー表示を強制更新
-                      if (mounted) {
-                        setState(() {});
-                      }
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(widget.initialSchedule != null
-                              ? '予定の更新に失敗しました'
-                              : '予定の追加に失敗しました'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    print(
-                        'DEBUG: Error ${widget.initialSchedule != null ? 'updating' : 'adding'} schedule: $e');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('エラーが発生しました: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
+                      },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: themeColor,
                   side: const BorderSide(color: themeColor),
                 ),
-                child: Text(widget.initialSchedule != null ? '更新' : '追加'),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(widget.initialSchedule != null ? '更新' : '追加'),
               ),
             ),
           ],
