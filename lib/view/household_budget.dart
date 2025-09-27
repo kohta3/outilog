@@ -12,7 +12,7 @@ import 'package:outi_log/provider/firestore_space_provider.dart';
 import 'package:outi_log/provider/category_provider.dart';
 import 'package:outi_log/utils/toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:outi_log/utils/memory_optimizer.dart';
+// import 'package:outi_log/utils/memory_optimizer.dart'; // デバッグ用に一時的に無効化
 import 'package:outi_log/utils/analytics_mixin.dart';
 
 class AccountBookScreen extends ConsumerStatefulWidget {
@@ -59,22 +59,16 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
         return;
       }
 
-      // キャッシュから取得を試行
-      final cacheKey = 'transactions_${currentSpace.id}';
-      final cachedData =
-          MemoryOptimizer.getCachedData<Map<String, List<Map<String, String>>>>(
-              cacheKey);
+      final transactions = await _transactionInfrastructure
+          .getSpaceTransactions(currentSpace.id);
 
-      if (cachedData != null) {
+      if (transactions.isEmpty) {
         setState(() {
-          data = cachedData;
+          data = {};
           _isLoading = false;
         });
         return;
       }
-
-      final transactions = await _transactionInfrastructure
-          .getSpaceTransactions(currentSpace.id);
 
       // データを月別に整理（支出と収入を分けて管理）
       final Map<String, List<Map<String, String>>> formattedData = {};
@@ -123,8 +117,9 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
         }
       }
 
-      // キャッシュに保存
-      MemoryOptimizer.cacheData(cacheKey, formattedData);
+      // キャッシュに保存（デバッグ用に一時的に無効化）
+      // final cacheKey = 'transactions_${currentSpace.id}';
+      // MemoryOptimizer.cacheData(cacheKey, formattedData);
 
       setState(() {
         data = formattedData;
@@ -147,7 +142,6 @@ class _AccountBookScreenState extends ConsumerState<AccountBookScreen>
       final currentSpace = ref.read(firestoreSpacesProvider)?.currentSpace;
 
       if (currentSpace != null) {
-        print('DEBUG: Initializing categories for household budget');
         await ref.read(categoryProvider.notifier).loadCategories();
 
         // カテゴリ読み込み後に取引データを再読み込み
