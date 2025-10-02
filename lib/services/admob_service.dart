@@ -33,8 +33,8 @@ class AdMobService {
   // 広告ユニットID（テスト用と本番用を切り替え可能）
   static Future<String> get _bannerAdUnitId async {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/9214589741'; // テスト用バナー広告ID
-      // return 'ca-app-pub-6529629959594411/1594396384'; // 本番用バナー広告ID
+      // return 'ca-app-pub-3940256099942544/9214589741'; // テスト用バナー広告ID
+      return 'ca-app-pub-6529629959594411/1594396384'; // 本番用バナー広告ID
     } else if (Platform.isIOS) {
       final isIPad = await _checkIsIPad();
       if (isIPad) {
@@ -48,8 +48,8 @@ class AdMobService {
 
   static Future<String> get _interstitialAdUnitId async {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/1033173712'; // テスト用インタースティシャル広告ID
-      // return 'ca-app-pub-6529629959594411/7658646821'; // 本番用インタースティシャル広告ID
+      // return 'ca-app-pub-3940256099942544/1033173712'; // テスト用インタースティシャル広告ID
+      return 'ca-app-pub-6529629959594411/7658646821'; // 本番用インタースティシャル広告ID
     } else if (Platform.isIOS) {
       final isIPad = await _checkIsIPad();
       if (isIPad) {
@@ -69,8 +69,8 @@ class AdMobService {
 
   static Future<String> get _nativeAdUnitId async {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/2247696110'; // テスト用ネイティブアドバンス広告ID
-      // return 'ca-app-pub-6529629959594411/1211253000'; // 本番用ネイティブアドバンス広告ID
+      // return 'ca-app-pub-3940256099942544/2247696110'; // テスト用ネイティブアドバンス広告ID
+      return 'ca-app-pub-6529629959594411/1211253000'; // 本番用ネイティブアドバンス広告ID
     } else if (Platform.isIOS) {
       final isIPad = await _checkIsIPad();
       if (isIPad) {
